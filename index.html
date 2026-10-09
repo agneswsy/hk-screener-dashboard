@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>港股選股 Dashboard — Agnes Wong</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#111a2e; --card:#152238; --card2:#1a2a44;
+  --border:#243552; --text:#e8eef8; --muted:#8fa3bf;
+  --accent:#3b82f6; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+  --navy:#0f172a; --chip:#1e334f; --drawer-w:400px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","PingFang HK","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  line-height:1.45}
+a{color:var(--accent)}
+.app{max-width:1400px;margin:0 auto;padding:16px 20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;
+  padding:18px 20px;background:linear-gradient(135deg,#0f1c33,#152848 60%,#0d2847);
+  border:1px solid var(--border);border-radius:14px;margin-bottom:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,.35)}
+header.top h1{margin:0;font-size:1.55rem;letter-spacing:.02em}
+header.top .sub{color:var(--muted);font-size:.88rem;margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:var(--chip);border:1px solid var(--border);font-size:.78rem;color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 18px;position:sticky;top:0;z-index:20;
+  background:rgba(11,18,32,.92);backdrop-filter:blur(8px);padding:8px 0;border-bottom:1px solid var(--border)}
+.tab{appearance:none;border:1px solid var(--border);background:var(--card);color:var(--muted);
+  padding:8px 14px;border-radius:999px;cursor:pointer;font-size:.9rem;font-weight:600;transition:.15s}
+.tab:hover{color:var(--text);border-color:#3a5070}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.panel{display:none}
+.panel.active{display:block}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:980px){.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media(max-width:560px){.g4,.g3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
+  box-shadow:0 4px 18px rgba(0,0,0,.22)}
+.card h3{margin:0 0 10px;font-size:.95rem;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.kpi .val{font-size:1.85rem;font-weight:700;margin:4px 0}
+.kpi .hint{font-size:.8rem;color:var(--muted)}
+.up{color:var(--green)} .down{color:var(--red)} .warn{color:var(--amber)}
+.mkt{display:flex;gap:16px;flex-wrap:wrap}
+.mkt .sym{font-weight:700;font-size:1.1rem}
+.mkt .px{font-size:1.35rem;font-weight:700}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:end}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted)}
+.filters select,.filters input,.compare-bar input,.compare-bar select{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:7px 10px;min-width:120px;font-size:.9rem}
+.filters button,.btn{background:var(--chip);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:8px 12px;cursor:pointer;font-size:.85rem}
+.filters button:hover,.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.table-wrap{overflow:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+th{background:var(--card2);color:var(--muted);position:sticky;top:0;cursor:pointer;user-select:none;font-weight:600}
+tr:hover td{background:rgba(59,130,246,.08)}
+tr.row-click{cursor:pointer}
+tr.row-click.selected td{background:rgba(59,130,246,.16)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700}
+.pill.high{background:rgba(239,68,68,.18);color:var(--red)}
+.pill.mid{background:rgba(245,158,11,.18);color:var(--amber)}
+.pill.low{background:rgba(34,197,94,.15);color:var(--green)}
+.pill.blue{background:rgba(59,130,246,.18);color:#93c5fd}
+.chart-box{position:relative;height:280px}
+.chart-box.tall{height:360px}
+.note{font-size:.82rem;color:var(--muted);margin-top:8px}
+.disclaimer{margin-top:18px;padding:14px 16px;border-radius:10px;border:1px solid rgba(239,68,68,.35);
+  background:rgba(239,68,68,.08);color:#fca5a5;font-size:.86rem}
+.ops-item{border-left:3px solid var(--accent);padding:10px 12px;margin:8px 0;background:var(--bg2);border-radius:0 8px 8px 0}
+.ops-item.p1{border-color:var(--red)} .ops-item.p2{border-color:var(--amber)} .ops-item.p3{border-color:var(--accent)}
+.ops-item .t{font-weight:700;color:var(--text)}
+.tag{font-size:.72rem;padding:1px 6px;border-radius:4px;background:var(--chip);margin-right:4px}
+footer{margin-top:24px;color:var(--muted);font-size:.78rem;text-align:center}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+
+/* Drawer */
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+.drawer-backdrop.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;width:min(var(--drawer-w),100vw);height:100vh;z-index:50;
+  background:linear-gradient(180deg,#12203a,#0e182b);border-left:1px solid var(--border);
+  box-shadow:-12px 0 40px rgba(0,0,0,.45);transform:translateX(100%);transition:.22s ease;overflow:auto}
+.drawer.open{transform:translateX(0)}
+.drawer-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  padding:18px 18px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:rgba(18,32,58,.96);backdrop-filter:blur(8px);z-index:1}
+.drawer-hd h2{margin:0;font-size:1.35rem}
+.drawer-hd .name{color:var(--muted);font-size:.85rem;margin-top:4px}
+.drawer-x{appearance:none;border:1px solid var(--border);background:var(--chip);color:var(--text);
+  width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:1.1rem;line-height:1}
+.drawer-body{padding:14px 18px 28px}
+.drawer-sec{margin:14px 0}
+.drawer-sec h4{margin:0 0 8px;font-size:.78rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv .cell{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kv .cell .lab{font-size:.72rem;color:var(--muted);margin-bottom:2px}
+.kv .cell .v{font-size:1.05rem;font-weight:700}
+.kv .cell.wide{grid-column:1/-1}
+.risk-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.flag{padding:4px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:var(--amber);
+  border:1px solid rgba(245,158,11,.35);font-size:.78rem;font-weight:600}
+.flag.high{background:rgba(239,68,68,.14);color:var(--red);border-color:rgba(239,68,68,.35)}
+.flag.ok{background:rgba(34,197,94,.12);color:var(--green);border-color:rgba(34,197,94,.3)}
+
+/* Compare */
+.compare-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.compare-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px;align-items:center}
+.chip-x{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.4);font-weight:700;font-size:.85rem}
+.chip-x button{appearance:none;border:0;background:transparent;color:inherit;cursor:pointer;font-size:1rem;line-height:1;padding:0}
+.search-wrap{position:relative}
+.search-dd{position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;max-height:220px;overflow:auto;display:none;margin-top:4px}
+.search-dd.open{display:block}
+.search-dd div{padding:8px 12px;cursor:pointer;font-size:.88rem}
+.search-dd div:hover,.search-dd div.active{background:rgba(59,130,246,.2)}
+.compare-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.compare-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.compare-card h4{margin:0 0 4px;font-size:1.2rem}
+.compare-card .cname{color:var(--muted);font-size:.78rem;margin-bottom:10px;min-height:2.2em}
+.compare-card .row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid rgba(36,53,82,.7);font-size:.84rem}
+.compare-card .row:last-child{border-bottom:0}
+.compare-card .row .k{color:var(--muted)}
+.compare-card .row .vv{font-weight:700;text-align:right}
+
+/* Earnings countdown */
+.earn-soon{display:flex;flex-wrap:wrap;gap:8px}
+.earn-chip{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:120px}
+.earn-chip .tk{font-weight:700}
+.earn-chip .dd{font-size:1.25rem;font-weight:700;margin:2px 0}
+.earn-chip .ed{font-size:.75rem;color:var(--muted)}
+.earn-chip.urgent{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08)}
+.earn-chip.near{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.08)}
+
+/* Heatmap Round 2 */
+.hm-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.hm-legend{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
+.hm-swatch{width:18px;height:14px;border-radius:3px;border:1px solid var(--border)}
+.hm-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:640px}
+.hm-table{border-collapse:separate;border-spacing:0;font-size:.78rem;width:100%}
+.hm-table th,.hm-table td{padding:6px 8px;border-bottom:1px solid var(--border);border-right:1px solid rgba(36,53,82,.5);text-align:center;white-space:nowrap}
+.hm-table th{background:var(--card2);color:var(--muted);position:sticky;top:0;z-index:2;font-weight:600}
+.hm-table th.sticky-col,.hm-table td.sticky-col{position:sticky;left:0;z-index:1;background:var(--card);text-align:left;font-weight:700;border-right:2px solid var(--border)}
+.hm-table th.sticky-col{z-index:3;background:var(--card2)}
+.hm-cell{min-width:72px;font-variant-numeric:tabular-nums;font-weight:600;border-radius:4px}
+.hm-cell.empty{color:var(--muted);font-weight:400;background:transparent!important}
+.btn.export{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.45);color:var(--green);font-weight:600}
+.btn.export:hover{border-color:var(--green);background:rgba(34,197,94,.25)}
+.mode-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mode-seg button{appearance:none;border:0;background:var(--bg2);color:var(--muted);padding:7px 12px;cursor:pointer;font-size:.82rem;font-weight:600}
+.mode-seg button.active{background:var(--accent);color:#fff}
+.mode-seg button+button{border-left:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div>
+    <h1>港股選股 Dashboard</h1>
+    <div class="sub" id="metaSub"></div>
+  </div>
+  <div class="badge" id="metaBadge"></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="overview">總覽 Overview</button>
+  <button class="tab" data-tab="watchlist">觀察名單 Watchlist</button>
+  <button class="tab" data-tab="compare">比較 Compare</button>
+  <button class="tab" data-tab="risk">風險 Risk</button>
+  <button class="tab" data-tab="perf">表現 Performance</button>
+  <button class="tab" data-tab="heatmap">回報熱力圖 Heatmap</button>
+  <button class="tab" data-tab="val">估值 Valuation</button>
+  <button class="tab" data-tab="ops">操作筆記 Ops</button>
+</nav>
+
+<!-- OVERVIEW -->
+<section class="panel active" id="panel-overview">
+  <div class="grid g4" id="kpiCards"></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>大盤參考 恒指 / 國指</h3>
+      <div class="mkt" id="mktBox"></div>
+      <div class="note">收市數據取自 yfinance（非即時報價）；南北水已由港股分析師補齊（證時／數據寶）</div>
+    </div>
+    <div class="card">
+      <h3>多日重複入選</h3>
+      <div id="multiBox"></div>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>業績倒數（距 as-of）</h3>
+      <div class="earn-soon" id="earnSoon"></div>
+      <div class="note" id="earnNote"></div>
+      <div class="table-wrap" style="max-height:220px;margin-top:10px">
+        <table id="earnTable">
+          <thead><tr><th>代號</th><th>名稱</th><th>業績日</th><th>倒數日</th><th>行業</th><th>風險</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>超額回報 vs 恒指 / 國指（自首選日）</h3>
+      <div class="grid g2" id="excessKpis" style="margin-bottom:10px"></div>
+      <div class="chart-box"><canvas id="chartExcess"></canvas></div>
+      <div class="note">超額回報＝個股自首選日至最新收市回報 − 同期恒指／國指回報（yfinance 歷史收市）</div>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>每日入選數量</h3><div class="chart-box"><canvas id="chartDaily"></canvas></div></div>
+    <div class="card"><h3>行業分布（獨特代號）</h3><div class="chart-box"><canvas id="chartSector"></canvas></div></div>
+  </div>
+</section>
+
+<!-- WATCHLIST -->
+<section class="panel" id="panel-watchlist">
+  <div class="card">
+    <h3>可篩選觀察名單</h3>
+    <div class="filters">
+      <label>行業<select id="fSector"><option value="">全部</option></select></label>
+      <label>日期<select id="fDate"><option value="">全部</option></select></label>
+      <label>RSI 區間<select id="fRsi">
+        <option value="">全部</option>
+        <option value="≥70 超買">≥70 超買</option>
+        <option value="60–70">60–70</option>
+        <option value="50–60">50–60</option>
+        <option value="<50">&lt;50</option>
+      </select></label>
+      <label>量比 ≥<input type="number" id="fVol" step="0.1" min="0" placeholder="例如 1.5"/></label>
+      <label>風險等級<select id="fRisk">
+        <option value="">全部</option>
+        <option value="高">高</option>
+        <option value="中">中</option>
+        <option value="低">低</option>
+      </select></label>
+      <label>搜尋<input type="search" id="fQ" placeholder="代號 / 公司"/></label>
+      <button type="button" id="fReset">重設</button>
+      <button type="button" class="btn export" id="btnExportCsv" title="匯出目前篩選結果">匯出 CSV</button>
+    </div>
+    <div class="note">點擊列開啟右側詳情抽屜。黃底／「每日」＝三日皆入選。南北水已補齊。可勾選加入比較（2–4 隻）。</div>
+    <div class="table-wrap" style="max-height:560px;margin-top:8px">
+      <table id="watchTable">
+        <thead><tr>
+          <th style="width:36px" title="加入比較">比</th>
+          <th data-k="ticker">代號</th><th data-k="name">名稱</th><th data-k="date">入選日</th><th data-k="sector">行業</th>
+          <th data-k="close">收市價</th><th data-k="turnover_m">成交額(百萬)</th><th data-k="rsi">RSI14</th><th data-k="vol_ratio">量比</th>
+          <th data-k="streak">連續日數</th>
+          <th data-k="vs_hsi_5d">相對恒指5D</th><th data-k="ah_premium_pct">AH溢價%</th>
+          <th data-k="upside_pct">目標上望%</th><th data-k="rating">評級</th>
+          <th data-k="risk_level">風險</th><th data-k="northbound_note">南北水</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note" id="watchCount"></div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section class="panel" id="panel-compare">
+  <div class="card">
+    <h3>代號搜尋 ＋ 並排比較（2–4 隻）</h3>
+    <div class="compare-bar">
+      <label class="search-wrap" style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted)">
+        搜尋代號／公司
+        <input type="search" id="cmpSearch" placeholder="輸入例如 PLTR、Marvell…" autocomplete="off"/>
+        <div class="search-dd" id="cmpDD"></div>
+      </label>
+      <div>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">已選</div>
+        <div class="compare-chips" id="cmpChips"></div>
+      </div>
+      <button type="button" class="btn" id="cmpClear">清空</button>
+      <button type="button" class="btn primary" id="cmpGo">更新比較</button>
+    </div>
+    <div class="note">可從觀察名單勾選，或於此搜尋加入。最少 2、最多 4 隻並排顯示關鍵指標。</div>
+    <div id="cmpOut" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- RISK -->
+<section class="panel" id="panel-risk">
+  <div class="grid g2">
+    <div class="card"><h3>風險嚴重度分布</h3><div class="chart-box"><canvas id="chartRisk"></canvas></div></div>
+    <div class="card"><h3>風險類型（標記含）</h3><div class="chart-box"><canvas id="chartRiskType"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>風險清單 — RSI≥70／高於目標／業績臨近</h3>
+    <div class="table-wrap" style="max-height:480px">
+      <table id="riskTable">
+        <thead><tr>
+          <th>代號</th><th>名稱</th><th>日期</th><th>行業</th><th>收市價</th><th>RSI</th><th>目標價</th>
+          <th>業績日</th><th>標記</th><th>嚴重度</th><th>說明</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note">規則：① RSI≥70 ② 收市價 &gt; 分析師目標 ③ 業績日在 14 日內 ④ 動能轉弱（MACD）。嚴重度：高＝≥2 項／中＝1 項關鍵。</div>
+  </div>
+</section>
+
+<!-- PERF -->
+<section class="panel" id="panel-perf">
+  <div class="card">
+    <h3>自首選日至最新收市回報%</h3>
+    <div class="chart-box tall"><canvas id="chartPerf"></canvas></div>
+    <div class="note">首次收市價取自篩選當日 close；最新收市來自 yfinance。不臆造價格。持有日數＝日曆日差。</div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>回報明細（含 vs 恒指／國指 超額）</h3>
+    <div class="table-wrap" style="max-height:480px">
+      <table id="perfTable">
+        <thead><tr>
+          <th>代號</th><th>名稱</th><th>行業</th><th>首次入選</th><th>首次收市</th><th>最新收市</th>
+          <th>回報%</th><th>恒指同期%</th><th>超額恒指</th><th>國指同期%</th><th>超額國指</th>
+          <th>持有日數</th><th>入選日數</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- HEATMAP Round 2 -->
+<section class="panel" id="panel-heatmap">
+  <div class="card">
+    <h3>回報熱力圖（自首選日至最新收市）</h3>
+    <div class="hm-controls">
+      <div>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">顯示指標</div>
+        <div class="mode-seg" id="hmMode">
+          <button type="button" class="active" data-mode="ret">絕對回報%</button>
+          <button type="button" data-mode="spy">超額 vs 恒指</button>
+          <button type="button" data-mode="qqq">超額 vs 國指</button>
+          <button type="button" data-mode="matrix">三欄矩陣</button>
+        </div>
+      </div>
+      <div class="hm-legend">
+        <span>色階：</span>
+        <span class="hm-swatch" style="background:#7f1d1d"></span><span>大跌</span>
+        <span class="hm-swatch" style="background:#ef4444"></span>
+        <span class="hm-swatch" style="background:#334155"></span><span>接近 0</span>
+        <span class="hm-swatch" style="background:#22c55e"></span>
+        <span class="hm-swatch" style="background:#14532d"></span><span>大升</span>
+      </div>
+    </div>
+    <div class="note">數據來自 performance（自首選日 close → 最新收市）；綠＝正回報／紅＝負回報。黃底／「每日」標＝連續三日入選。不臆造價格。</div>
+    <div class="hm-wrap" style="margin-top:10px">
+      <table class="hm-table" id="hmTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note" id="hmNote"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>入選日 × 代號（收市價格子；多日重複可見）</h3>
+    <div class="note">格子顯示該日入選收市價；底色對應該股自首選絕對回報%（同色階）。空白＝當日未入選。</div>
+    <div class="hm-wrap" style="margin-top:10px;max-height:420px">
+      <table class="hm-table" id="hmDateTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- VALUATION -->
+<section class="panel" id="panel-val">
+  <div class="grid g2">
+    <div class="card"><h3>目標上望% vs 市盈率 PE（有數據者）</h3><div class="chart-box tall"><canvas id="chartScatter"></canvas></div></div>
+    <div class="card"><h3>目標上望%（按代號，最新列）</h3><div class="chart-box tall"><canvas id="chartUpside"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>估值摘要</h3>
+    <div class="table-wrap" style="max-height:420px">
+      <table id="valTable">
+        <thead><tr>
+          <th>代號</th><th>名稱</th><th>日期</th><th>收市價</th><th>市盈率</th><th>預測市盈率</th><th>目標價</th>
+          <th>上望%</th><th>評級</th><th>風險</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- OPS -->
+<section class="panel" id="panel-ops">
+  <div class="card">
+    <h3>觀察清單 Observation Checklist（非買賣建議）</h3>
+    <div class="note">優先級：1＝多日重複重點｜2＝有明確風險／事件｜3＝最新日一般追蹤。全部為觀察筆記，不是買賣指令。</div>
+    <div id="opsList" style="margin-top:12px"></div>
+  </div>
+  <div class="disclaimer" id="disclaimer"></div>
+</section>
+
+<footer>Agnes Wong · 港股篩選研究儀表板 · 數據嵌入本頁，可離線開啟 · Chart.js CDN · Round 2：熱力圖／URL 篩選／匯出 CSV · 港股特色：成交額／南北水／AH溢價／相對恒指國指 · 以上只係資訊，唔係投資建議</footer>
+</div>
+
+<!-- Detail drawer -->
+<div class="drawer-backdrop" id="drawerBd"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-hd">
+    <div>
+      <h2 id="drTicker">—</h2>
+      <div class="name" id="drName"></div>
+    </div>
+    <button type="button" class="drawer-x" id="drClose" title="關閉">×</button>
+  </div>
+  <div class="drawer-body" id="drBody"></div>
+</aside>
+
+<script>
+const DATA = {"meta":{"title":"港股選股 Dashboard","owner":"Agnes Wong","updated":"2026-10-09T19:48:00+08:00","latest_date":"2026-10-09","as_of":"2026-10-09","valuation_source":"yfinance（公開數據）；評級／業績／AH／南北水由港股分析師2026-10-09補齊（Yahoo／證時／高盛）","disclaimer":"以上只係資訊，唔係投資建議。本儀表板內容來自篩選結果同公開數據自動整理，僅供研究觀察紀錄，不構成證券買賣、持有或沽空建議。投資涉及風險，請自行判斷並咨詢持牌顧問。","benchmark_note":"恒指（^HSI）／國指（^HSCE）歷史收市取自 yfinance；超額回報＝個股自首選日至最新收市回報 − 同期基準回報","hk_notes":"成交額來自選股器；南北水欄待港股分析師補充；AH溢價僅對已知雙重上市股份嘗試計算（A股×CNYHKD 兌港元）","source_excel":"港股選股.xlsx","days":["2026-10-07","2026-10-08","2026-10-09"],"every_day_tickers":["1138","1308","1548","2268","2269","2359","3759","6127"],"analyst_note":"評級／業績／AH／南北水由港股分析師於2026-10-09補齊；來源 Yahoo Finance、證券時報／數據寶、高盛（阿思達克2026-09-11）"},"kpis":{"daily_counts":[{"date":"2026-10-07","count":12,"note":""},{"date":"2026-10-08","count":15,"note":""},{"date":"2026-10-09","count":15,"note":"全日黃底連續入選"}],"unique_tickers":23,"total_picks":42,"valuation_coverage":"41/42","valuation_unique":"22/23","multi_day":[{"ticker":"2269","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2359","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1548","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1138","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2268","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"6127","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1308","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"3759","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2315","pick_days":2,"last_date":"2026-10-09","today":true,"every_day":false,"streak":2},{"ticker":"1866","pick_days":2,"last_date":"2026-10-09","today":true,"every_day":false,"streak":2},{"ticker":"0622","pick_days":2,"last_date":"2026-10-08","today":false,"every_day":false,"streak":2}],"every_day_count":8,"today_count":15,"avg_excess_hsi":-2.03,"avg_excess_hsce":-2.26,"earnings_within_14":1,"earnings_within_30":2},"benchmarks":{"HSI":{"date":"2026-10-09","close":24211.35,"prev":23785.79,"chg_pct":1.79,"history":{"2026-09-25":24510.09,"2026-09-28":24642.51,"2026-09-29":24523.57,"2026-09-30":24613.27,"2026-10-02":23972.29,"2026-10-05":24040.34,"2026-10-06":24280.56,"2026-10-07":24130.5,"2026-10-08":23785.79,"2026-10-09":24211.35},"ret_1d":1.79,"ret_5d":1.0,"ret_1m":-4.21},"HSCEI":{"date":"2026-10-09","close":8147.87,"prev":8010.58,"chg_pct":1.71,"history":{"2026-09-25":8165.78,"2026-09-28":8216.84,"2026-09-29":8178.81,"2026-09-30":8220.08,"2026-10-02":8030.54,"2026-10-05":8051.67,"2026-10-06":8128.97,"2026-10-07":8082.4,"2026-10-08":8010.58,"2026-10-09":8147.87},"ret_1d":1.71,"ret_5d":1.46,"ret_1m":-2.64}},"sectors":{"醫療保健":10,"工業":3,"科技":3,"能源":1,"必須消費":1,"地產":1,"原材料":1,"通訊服務":1,"非必須消費":1,"金融":1},"picks":[{"ticker":"2269","yf_ticker":"2269.HK","name":"藥明生物","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-09","close":53.85,"rsi":55.58,"rsi_band":"50–60","vol_ratio":7.04,"mkt_cap_yi":221.66,"turnover_m":7442.52,"pct_from_high":-7.16,"pct_from_low":89.08,"streak":3,"every_day":true,"excel_yellow":true,"pe":40.49,"fwd_pe":24.82,"target":58.26,"upside_pct":8.2,"rating":"中性","support20":47.0,"resistance":57.9,"earnings":"2027-03-30","risk":"MACD死叉偏空；高盛中性；CXO板塊消息敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.058,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.46,"ret_5d":-1.28,"ret_1m":10.26,"vs_hsi_1d":-2.25,"vs_hsi_5d":-2.28,"vs_hsi_1m":14.47,"vs_hsce_1d":-2.17,"vs_hsce_5d":-2.74,"vs_hsce_1m":12.9,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"2359","yf_ticker":"2359.HK","name":"藥明康德","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-09","close":208.0,"rsi":53.97,"rsi_band":"50–60","vol_ratio":2.95,"mkt_cap_yi":631.26,"turnover_m":2200.75,"pct_from_high":-5.11,"pct_from_low":115.1,"streak":3,"every_day":true,"excel_yellow":true,"pe":25.24,"fwd_pe":19.97,"target":223.51,"upside_pct":7.5,"rating":"強力買入","support20":188.8,"resistance":218.6,"earnings":"2026-10-22","risk":"動能轉弱；貼近高位；10/22業績；生物安全法案風險","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.257,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.48,"ret_5d":-0.95,"ret_1m":7.66,"vs_hsi_1d":-2.27,"vs_hsi_5d":-1.95,"vs_hsi_1m":11.87,"vs_hsce_1d":-2.19,"vs_hsce_5d":-2.41,"vs_hsce_1m":10.3,"ah_code":"603259.SS","ah_premium_pct":20.93,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1548","yf_ticker":"1548.HK","name":"金斯瑞生物科技","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-09","close":42.4,"rsi":56.12,"rsi_band":"50–60","vol_ratio":1.7,"mkt_cap_yi":96.69,"turnover_m":2113.98,"pct_from_high":-14.27,"pct_from_low":309.27,"streak":3,"every_day":true,"excel_yellow":true,"pe":null,"fwd_pe":75.04,"target":30.67,"upside_pct":-27.7,"rating":"買入","support20":32.36,"resistance":49.14,"earnings":"2027-03-15","risk":"股價高於Yahoo目標價；動能轉弱；10/8南向大額淨賣","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.358,"macd_status":"死叉偏空","has_val":true,"ret_1d":4.18,"ret_5d":-3.02,"ret_1m":25.89,"vs_hsi_1d":2.39,"vs_hsi_5d":-4.02,"vs_hsi_1m":30.1,"vs_hsce_1d":2.47,"vs_hsce_5d":-4.48,"vs_hsce_1m":28.53,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1138","yf_ticker":"1138.HK","name":"中遠海能","sector":"能源","industry":"Oil & Gas Midstream","date":"2026-10-09","close":21.32,"rsi":68.77,"rsi_band":"60–70","vol_ratio":2.07,"mkt_cap_yi":116.65,"turnover_m":626.96,"pct_from_high":-4.82,"pct_from_low":155.64,"streak":3,"every_day":true,"excel_yellow":true,"pe":15.12,"fwd_pe":7.35,"target":24.52,"upside_pct":15.0,"rating":"強力買入","support20":17.82,"resistance":21.32,"earnings":null,"risk":"運價同地緣政治波動大；AH折價約17%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.099,"macd_status":"金叉偏多","has_val":true,"ret_1d":2.01,"ret_5d":11.33,"ret_1m":14.79,"vs_hsi_1d":0.22,"vs_hsi_5d":10.33,"vs_hsi_1m":19.0,"vs_hsce_1d":0.3,"vs_hsce_5d":9.87,"vs_hsce_1m":17.43,"ah_code":"600026.SS","ah_premium_pct":-16.73,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"2268","yf_ticker":"2268.HK","name":"藥明合聯","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-09","close":82.1,"rsi":61.01,"rsi_band":"60–70","vol_ratio":2.88,"mkt_cap_yi":103.97,"turnover_m":568.92,"pct_from_high":-3.98,"pct_from_low":88.74,"streak":3,"every_day":true,"excel_yellow":true,"pe":64.14,"fwd_pe":32.17,"target":92.31,"upside_pct":12.4,"rating":"強力買入","support20":72.1,"resistance":84.2,"earnings":"2027-03-29","risk":"動能轉弱；海外收入高、生物安全法案敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.133,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.18,"ret_5d":1.86,"ret_1m":10.35,"vs_hsi_1d":-1.97,"vs_hsi_5d":0.86,"vs_hsi_1m":14.56,"vs_hsce_1d":-1.89,"vs_hsce_5d":0.4,"vs_hsce_1m":12.99,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"6127","yf_ticker":"6127.HK","name":"昭衍新藥","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-09","close":31.32,"rsi":65.75,"rsi_band":"60–70","vol_ratio":3.06,"mkt_cap_yi":23.47,"turnover_m":293.44,"pct_from_high":-3.87,"pct_from_low":107.01,"streak":3,"every_day":true,"excel_yellow":true,"pe":21.31,"fwd_pe":103.13,"target":24.93,"upside_pct":-20.4,"rating":"買入","support20":21.2,"resistance":32.2,"earnings":null,"risk":"股價高於目標價；AH大幅折價（港股平A股）","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.403,"macd_status":"金叉偏多","has_val":true,"ret_1d":4.12,"ret_5d":2.96,"ret_1m":38.34,"vs_hsi_1d":2.33,"vs_hsi_5d":1.96,"vs_hsi_1m":42.55,"vs_hsce_1d":2.41,"vs_hsce_5d":1.5,"vs_hsce_1m":40.98,"ah_code":"603127.SS","ah_premium_pct":-45.37,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1308","yf_ticker":"1308.HK","name":"海豐國際","sector":"工業","industry":"Marine Shipping","date":"2026-10-09","close":50.05,"rsi":64.94,"rsi_band":"60–70","vol_ratio":1.35,"mkt_cap_yi":134.67,"turnover_m":228.9,"pct_from_high":-1.28,"pct_from_low":95.2,"streak":3,"every_day":true,"excel_yellow":true,"pe":13.64,"fwd_pe":13.99,"target":44.26,"upside_pct":-11.6,"rating":"買入","support20":45.36,"resistance":50.05,"earnings":"2027-03-10","risk":"動能轉弱；高於目標價；貼近52周高","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.043,"macd_status":"死叉偏空","has_val":true,"ret_1d":1.11,"ret_5d":4.71,"ret_1m":10.98,"vs_hsi_1d":-0.68,"vs_hsi_5d":3.71,"vs_hsi_1m":15.19,"vs_hsce_1d":-0.6,"vs_hsce_5d":3.25,"vs_hsce_1m":13.62,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"3759","yf_ticker":"3759.HK","name":"康龍化成","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-09","close":30.6,"rsi":51.97,"rsi_band":"50–60","vol_ratio":2.15,"mkt_cap_yi":56.22,"turnover_m":228.53,"pct_from_high":-12.22,"pct_from_low":111.76,"streak":3,"every_day":true,"excel_yellow":true,"pe":28.87,"fwd_pe":18.26,"target":39.73,"upside_pct":29.8,"rating":"買入","support20":27.54,"resistance":32.94,"earnings":"2026-10-27","risk":"10/27業績臨近；AH折價約35%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.005,"macd_status":"金叉偏多","has_val":true,"ret_1d":-2.11,"ret_5d":-0.65,"ret_1m":6.47,"vs_hsi_1d":-3.9,"vs_hsi_5d":-1.65,"vs_hsi_1m":10.68,"vs_hsce_1d":-3.82,"vs_hsce_5d":-2.11,"vs_hsce_1m":9.11,"ah_code":"300759.SZ","ah_premium_pct":-34.88,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"2162","yf_ticker":"2162.HK","name":"康諾亞－Ｂ","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-09","close":78.3,"rsi":51.94,"rsi_band":"50–60","vol_ratio":3.73,"mkt_cap_yi":23.07,"turnover_m":219.2,"pct_from_high":-12.76,"pct_from_low":75.32,"streak":1,"every_day":false,"excel_yellow":false,"pe":26.54,"fwd_pe":190.99,"target":104.07,"upside_pct":32.9,"rating":"強力買入","support20":72.05,"resistance":81.55,"earnings":null,"risk":"生物科技波動大；估值偏高需業績兌現","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.174,"macd_status":"金叉偏多","has_val":true,"ret_1d":3.57,"ret_5d":-0.7,"ret_1m":2.49,"vs_hsi_1d":1.78,"vs_hsi_5d":-1.7,"vs_hsi_1m":6.7,"vs_hsce_1d":1.86,"vs_hsce_5d":-2.16,"vs_hsce_1m":5.13,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1797","yf_ticker":"1797.HK","name":"東方甄選","sector":"必須消費","industry":"Education & Training Services","date":"2026-10-09","close":26.52,"rsi":56.93,"rsi_band":"50–60","vol_ratio":2.13,"mkt_cap_yi":27.93,"turnover_m":125.9,"pct_from_high":-19.64,"pct_from_low":50.77,"streak":1,"every_day":false,"excel_yellow":false,"pe":46.53,"fwd_pe":24.56,"target":28.84,"upside_pct":8.7,"rating":"買入","support20":23.9,"resistance":27.08,"earnings":"2027-01-19","risk":"動能轉弱；直播電商競爭激烈","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.099,"macd_status":"死叉偏空","has_val":true,"ret_1d":3.03,"ret_5d":2.63,"ret_1m":4.25,"vs_hsi_1d":1.24,"vs_hsi_5d":1.63,"vs_hsi_1m":8.46,"vs_hsce_1d":1.32,"vs_hsce_5d":1.17,"vs_hsce_1m":6.89,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"2315","yf_ticker":"2315.HK","name":"百奧賽圖－Ｂ","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-09","close":69.2,"rsi":53.08,"rsi_band":"50–60","vol_ratio":1.75,"mkt_cap_yi":30.7,"turnover_m":116.34,"pct_from_high":-14.2,"pct_from_low":221.26,"streak":2,"every_day":false,"excel_yellow":false,"pe":72.84,"fwd_pe":45.13,"target":62.86,"upside_pct":-9.2,"rating":"未有共識","support20":56.1,"resistance":79.7,"earnings":null,"risk":"高於目標價；分析師覆蓋極低","risk_level":"中高","ema_stack":"多頭排列","macd_hist":0.341,"macd_status":"金叉偏多","has_val":true,"ret_1d":-1.14,"ret_5d":2.59,"ret_1m":13.54,"vs_hsi_1d":-2.93,"vs_hsi_5d":1.59,"vs_hsi_1m":17.75,"vs_hsce_1d":-2.85,"vs_hsce_5d":1.13,"vs_hsce_1m":16.18,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1997","yf_ticker":"1997.HK","name":"九龍倉置業","sector":"地產","industry":"Real Estate Services","date":"2026-10-09","close":30.72,"rsi":52.64,"rsi_band":"50–60","vol_ratio":1.0,"mkt_cap_yi":93.27,"turnover_m":111.65,"pct_from_high":-11.77,"pct_from_low":51.63,"streak":1,"every_day":false,"excel_yellow":false,"pe":null,"fwd_pe":13.79,"target":35.38,"upside_pct":15.2,"rating":"買入","support20":29.46,"resistance":31.04,"earnings":"2027-03-10","risk":"動能轉弱；地產／零售市道偏弱","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.081,"macd_status":"死叉偏空","has_val":true,"ret_1d":2.26,"ret_5d":2.47,"ret_1m":-3.21,"vs_hsi_1d":0.47,"vs_hsi_5d":1.47,"vs_hsi_1m":1.0,"vs_hsce_1d":0.55,"vs_hsce_5d":1.01,"vs_hsce_1m":-0.57,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"0019","yf_ticker":"0019.HK","name":"太古股份公司Ａ","sector":"工業","industry":"Conglomerates","date":"2026-10-09","close":102.1,"rsi":50.27,"rsi_band":"50–60","vol_ratio":1.17,"mkt_cap_yi":370.41,"turnover_m":109.75,"pct_from_high":-5.99,"pct_from_low":62.84,"streak":1,"every_day":false,"excel_yellow":false,"pe":15.54,"fwd_pe":10.38,"target":106.91,"upside_pct":4.7,"rating":"未有共識","support20":99.7,"resistance":103.9,"earnings":"2027-03-11","risk":"動能轉弱；未有明確賣方評級共識","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.267,"macd_status":"死叉偏空","has_val":true,"ret_1d":1.9,"ret_5d":0.89,"ret_1m":-4.67,"vs_hsi_1d":0.11,"vs_hsi_5d":-0.11,"vs_hsi_1m":-0.46,"vs_hsce_1d":0.19,"vs_hsce_5d":-0.57,"vs_hsce_1m":-2.03,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"2285","yf_ticker":"2285.HK","name":"泉峰控股","sector":"工業","industry":"Tools & Accessories","date":"2026-10-09","close":30.74,"rsi":71.88,"rsi_band":"≥70 超買","vol_ratio":0.89,"mkt_cap_yi":15.64,"turnover_m":75.98,"pct_from_high":-5.12,"pct_from_low":111.71,"streak":1,"every_day":false,"excel_yellow":false,"pe":18.74,"fwd_pe":12.76,"target":29.65,"upside_pct":-3.5,"rating":"強力買入","support20":24.6,"resistance":31.54,"earnings":null,"risk":"RSI超買；高於目標價；短線回吐風險","risk_level":"高","ema_stack":"多頭排列","macd_hist":0.38,"macd_status":"金叉偏多","has_val":true,"ret_1d":-1.66,"ret_5d":6.29,"ret_1m":53.7,"vs_hsi_1d":-3.45,"vs_hsi_5d":5.29,"vs_hsi_1m":57.91,"vs_hsce_1d":-3.37,"vs_hsce_5d":4.83,"vs_hsce_1m":56.34,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1866","yf_ticker":"1866.HK","name":"中國心連心化肥","sector":"原材料","industry":"Agricultural Inputs","date":"2026-10-09","close":10.72,"rsi":54.91,"rsi_band":"50–60","vol_ratio":2.01,"mkt_cap_yi":13.64,"turnover_m":61.02,"pct_from_high":-17.41,"pct_from_low":52.71,"streak":2,"every_day":false,"excel_yellow":false,"pe":9.83,"fwd_pe":5.83,"target":14.29,"upside_pct":33.3,"rating":"未有共識","support20":9.66,"resistance":10.9,"earnings":null,"risk":"化肥週期波動；分析師覆蓋少","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.031,"macd_status":"金叉偏多","has_val":true,"ret_1d":0.75,"ret_5d":4.08,"ret_1m":-2.46,"vs_hsi_1d":-1.04,"vs_hsi_5d":3.08,"vs_hsi_1m":1.75,"vs_hsce_1d":-0.96,"vs_hsce_5d":2.62,"vs_hsce_1m":0.18,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買約30.4億（證時）；活躍榜未見本批多數CXO"},{"ticker":"1548","yf_ticker":"1548.HK","name":"金斯瑞生物科技","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-08","close":40.7,"rsi":53.44,"rsi_band":"50–60","vol_ratio":3.41,"mkt_cap_yi":92.82,"turnover_m":3041.42,"pct_from_high":-17.71,"pct_from_low":292.86,"streak":2,"every_day":true,"excel_yellow":true,"pe":null,"fwd_pe":75.04,"target":30.67,"upside_pct":-24.7,"rating":"買入","support20":32.36,"resistance":49.14,"earnings":"2027-03-15","risk":"股價高於Yahoo目標價；動能轉弱；10/8南向大額淨賣","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.358,"macd_status":"死叉偏空","has_val":true,"ret_1d":4.18,"ret_5d":-3.02,"ret_1m":25.89,"vs_hsi_1d":2.39,"vs_hsi_5d":-4.02,"vs_hsi_1m":30.1,"vs_hsce_1d":2.47,"vs_hsce_5d":-4.48,"vs_hsce_1m":28.53,"ah_code":null,"ah_premium_pct":null,"southbound":-5.85,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"2269","yf_ticker":"2269.HK","name":"藥明生物","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-08","close":54.1,"rsi":56.47,"rsi_band":"50–60","vol_ratio":1.66,"mkt_cap_yi":222.69,"turnover_m":1910.0,"pct_from_high":-6.72,"pct_from_low":89.96,"streak":2,"every_day":true,"excel_yellow":true,"pe":40.49,"fwd_pe":24.82,"target":58.26,"upside_pct":7.7,"rating":"中性","support20":47.0,"resistance":57.9,"earnings":"2027-03-30","risk":"MACD死叉偏空；高盛中性；CXO板塊消息敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.058,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.46,"ret_5d":-1.28,"ret_1m":10.26,"vs_hsi_1d":-2.25,"vs_hsi_5d":-2.28,"vs_hsi_1m":14.47,"vs_hsce_1d":-2.17,"vs_hsce_5d":-2.74,"vs_hsce_1m":12.9,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"2359","yf_ticker":"2359.HK","name":"藥明康德","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-08","close":209.0,"rsi":55.05,"rsi_band":"50–60","vol_ratio":2.44,"mkt_cap_yi":634.29,"turnover_m":1640.01,"pct_from_high":-4.65,"pct_from_low":116.13,"streak":2,"every_day":true,"excel_yellow":true,"pe":25.24,"fwd_pe":19.97,"target":223.51,"upside_pct":6.9,"rating":"強力買入","support20":188.8,"resistance":218.6,"earnings":"2026-10-22","risk":"動能轉弱；貼近高位；10/22業績；生物安全法案風險","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.257,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.48,"ret_5d":-0.95,"ret_1m":7.66,"vs_hsi_1d":-2.27,"vs_hsi_5d":-1.95,"vs_hsi_1m":11.87,"vs_hsce_1d":-2.19,"vs_hsce_5d":-2.41,"vs_hsce_1m":10.3,"ah_code":"603259.SS","ah_premium_pct":20.93,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"1138","yf_ticker":"1138.HK","name":"中遠海能","sector":"能源","industry":"Oil & Gas Midstream","date":"2026-10-08","close":20.9,"rsi":66.81,"rsi_band":"60–70","vol_ratio":3.57,"mkt_cap_yi":114.35,"turnover_m":789.3,"pct_from_high":-6.7,"pct_from_low":150.6,"streak":2,"every_day":true,"excel_yellow":true,"pe":15.12,"fwd_pe":7.35,"target":24.52,"upside_pct":17.3,"rating":"強力買入","support20":17.82,"resistance":21.32,"earnings":null,"risk":"運價同地緣政治波動大；AH折價約17%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.099,"macd_status":"金叉偏多","has_val":true,"ret_1d":2.01,"ret_5d":11.33,"ret_1m":14.79,"vs_hsi_1d":0.22,"vs_hsi_5d":10.33,"vs_hsi_1m":19.0,"vs_hsce_1d":0.3,"vs_hsce_5d":9.87,"vs_hsce_1m":17.43,"ah_code":"600026.SS","ah_premium_pct":-16.73,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"2268","yf_ticker":"2268.HK","name":"藥明合聯","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-08","close":82.25,"rsi":61.45,"rsi_band":"60–70","vol_ratio":2.2,"mkt_cap_yi":104.16,"turnover_m":440.79,"pct_from_high":-3.8,"pct_from_low":89.08,"streak":2,"every_day":true,"excel_yellow":true,"pe":64.14,"fwd_pe":32.17,"target":92.31,"upside_pct":12.2,"rating":"強力買入","support20":72.1,"resistance":84.2,"earnings":"2027-03-29","risk":"動能轉弱；海外收入高、生物安全法案敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.133,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.18,"ret_5d":1.86,"ret_1m":10.35,"vs_hsi_1d":-1.97,"vs_hsi_5d":0.86,"vs_hsi_1m":14.56,"vs_hsce_1d":-1.89,"vs_hsce_5d":0.4,"vs_hsce_1m":12.99,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"6127","yf_ticker":"6127.HK","name":"昭衍新藥","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-08","close":30.08,"rsi":62.42,"rsi_band":"60–70","vol_ratio":3.01,"mkt_cap_yi":22.54,"turnover_m":293.59,"pct_from_high":-7.67,"pct_from_low":98.81,"streak":2,"every_day":true,"excel_yellow":true,"pe":21.31,"fwd_pe":103.13,"target":24.93,"upside_pct":-17.1,"rating":"買入","support20":21.2,"resistance":32.2,"earnings":null,"risk":"股價高於目標價；AH大幅折價（港股平A股）","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.403,"macd_status":"金叉偏多","has_val":true,"ret_1d":4.12,"ret_5d":2.96,"ret_1m":38.34,"vs_hsi_1d":2.33,"vs_hsi_5d":1.96,"vs_hsi_1m":42.55,"vs_hsce_1d":2.41,"vs_hsce_5d":1.5,"vs_hsce_1m":40.98,"ah_code":"603127.SS","ah_premium_pct":-45.37,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"1308","yf_ticker":"1308.HK","name":"海豐國際","sector":"工業","industry":"Marine Shipping","date":"2026-10-08","close":49.5,"rsi":62.9,"rsi_band":"60–70","vol_ratio":1.31,"mkt_cap_yi":133.19,"turnover_m":264.25,"pct_from_high":-1.0,"pct_from_low":93.06,"streak":2,"every_day":true,"excel_yellow":true,"pe":13.64,"fwd_pe":13.99,"target":44.26,"upside_pct":-10.6,"rating":"買入","support20":45.36,"resistance":50.05,"earnings":"2027-03-10","risk":"動能轉弱；高於目標價；貼近52周高","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.043,"macd_status":"死叉偏空","has_val":true,"ret_1d":1.11,"ret_5d":4.71,"ret_1m":10.98,"vs_hsi_1d":-0.68,"vs_hsi_5d":3.71,"vs_hsi_1m":15.19,"vs_hsce_1d":-0.6,"vs_hsce_5d":3.25,"vs_hsce_1m":13.62,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"3759","yf_ticker":"3759.HK","name":"康龍化成","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-08","close":31.26,"rsi":55.51,"rsi_band":"50–60","vol_ratio":2.17,"mkt_cap_yi":57.43,"turnover_m":243.09,"pct_from_high":-10.33,"pct_from_low":116.33,"streak":2,"every_day":true,"excel_yellow":true,"pe":28.87,"fwd_pe":18.26,"target":39.73,"upside_pct":27.1,"rating":"買入","support20":27.54,"resistance":32.94,"earnings":"2026-10-27","risk":"10/27業績臨近；AH折價約35%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.005,"macd_status":"金叉偏多","has_val":true,"ret_1d":-2.11,"ret_5d":-0.65,"ret_1m":6.47,"vs_hsi_1d":-3.9,"vs_hsi_5d":-1.65,"vs_hsi_1m":10.68,"vs_hsce_1d":-3.82,"vs_hsce_5d":-2.11,"vs_hsce_1m":9.11,"ah_code":"300759.SZ","ah_premium_pct":-34.88,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"2315","yf_ticker":"2315.HK","name":"百奧賽圖－Ｂ","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-08","close":70.0,"rsi":54.05,"rsi_band":"50–60","vol_ratio":4.03,"mkt_cap_yi":31.05,"turnover_m":218.44,"pct_from_high":-13.21,"pct_from_low":224.98,"streak":1,"every_day":false,"excel_yellow":false,"pe":72.84,"fwd_pe":45.13,"target":62.86,"upside_pct":-10.2,"rating":"未有共識","support20":56.1,"resistance":79.7,"earnings":null,"risk":"高於目標價；分析師覆蓋極低","risk_level":"中高","ema_stack":"多頭排列","macd_hist":0.341,"macd_status":"金叉偏多","has_val":true,"ret_1d":-1.14,"ret_5d":2.59,"ret_1m":13.54,"vs_hsi_1d":-2.93,"vs_hsi_5d":1.59,"vs_hsi_1m":17.75,"vs_hsce_1d":-2.85,"vs_hsce_5d":1.13,"vs_hsce_1m":16.18,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"1566","yf_ticker":"1566.HK","name":"華夏文化科技","sector":"通訊服務","industry":"Entertainment","date":"2026-10-08","close":6.16,"rsi":73.3,"rsi_band":"≥70 超買","vol_ratio":10.0,"mkt_cap_yi":9.95,"turnover_m":111.59,"pct_from_high":-2.15,"pct_from_low":11968.63,"streak":1,"every_day":false,"excel_yellow":false,"pe":null,"fwd_pe":null,"target":null,"upside_pct":null,"rating":"未有共識","support20":3.85,"resistance":6.7,"earnings":null,"risk":"RSI超買","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.067,"macd_status":"金叉偏多","has_val":false,"ret_1d":8.85,"ret_5d":39.0,"ret_1m":62.03,"vs_hsi_1d":7.06,"vs_hsi_5d":38.0,"vs_hsi_1m":66.24,"vs_hsce_1d":7.14,"vs_hsce_5d":37.54,"vs_hsce_1m":64.67,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"6821","yf_ticker":"6821.HK","name":"凱萊英","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-08","close":163.0,"rsi":58.79,"rsi_band":"50–60","vol_ratio":2.08,"mkt_cap_yi":59.0,"turnover_m":93.15,"pct_from_high":-8.43,"pct_from_low":135.55,"streak":1,"every_day":false,"excel_yellow":false,"pe":47.43,"fwd_pe":25.04,"target":150.07,"upside_pct":-7.9,"rating":"買入","support20":134.2,"resistance":170.7,"earnings":null,"risk":"動能轉弱；高於目標價","risk_level":"高","ema_stack":"交錯","macd_hist":-1.271,"macd_status":"死叉偏空","has_val":true,"ret_1d":-4.85,"ret_5d":-6.9,"ret_1m":10.47,"vs_hsi_1d":-6.64,"vs_hsi_5d":-7.9,"vs_hsi_1m":14.68,"vs_hsce_1d":-6.56,"vs_hsce_5d":-8.36,"vs_hsce_1m":13.11,"ah_code":"002821.SZ","ah_premium_pct":-25.59,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"0805","yf_ticker":"0805.HK","name":"新吉奧房車","sector":"非必須消費","industry":"Recreational Vehicles","date":"2026-10-08","close":12.8,"rsi":67.27,"rsi_band":"60–70","vol_ratio":1.47,"mkt_cap_yi":12.29,"turnover_m":87.99,"pct_from_high":-5.19,"pct_from_low":1291.3,"streak":1,"every_day":false,"excel_yellow":false,"pe":1249.0,"fwd_pe":null,"target":null,"upside_pct":null,"rating":"未有共識","support20":8.16,"resistance":12.89,"earnings":null,"risk":"暫無特別警示","risk_level":"低","ema_stack":"多頭排列","macd_hist":0.179,"macd_status":"金叉偏多","has_val":true,"ret_1d":-2.42,"ret_5d":-3.03,"ret_1m":52.78,"vs_hsi_1d":-4.21,"vs_hsi_5d":-4.03,"vs_hsi_1m":56.99,"vs_hsce_1d":-4.13,"vs_hsce_5d":-4.49,"vs_hsce_1m":55.42,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"0622","yf_ticker":"0622.HK","name":"威華達控股","sector":"金融","industry":"Capital Markets","date":"2026-10-08","close":3.06,"rsi":54.96,"rsi_band":"50–60","vol_ratio":1.21,"mkt_cap_yi":21.21,"turnover_m":75.91,"pct_from_high":-5.86,"pct_from_low":550.0,"streak":2,"every_day":false,"excel_yellow":false,"pe":50.25,"fwd_pe":null,"target":null,"upside_pct":null,"rating":"未有共識","support20":2.82,"resistance":3.15,"earnings":null,"risk":"動能轉弱","risk_level":"中","ema_stack":"交錯","macd_hist":-0.021,"macd_status":"死叉偏空","has_val":true,"ret_1d":-1.31,"ret_5d":-3.52,"ret_1m":8.45,"vs_hsi_1d":-3.1,"vs_hsi_5d":-4.52,"vs_hsi_1m":12.66,"vs_hsce_1d":-3.02,"vs_hsce_5d":-4.98,"vs_hsce_1m":11.09,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"1070","yf_ticker":"1070.HK","name":"ＴＣＬ電子","sector":"科技","industry":"Consumer Electronics","date":"2026-10-08","close":17.18,"rsi":51.95,"rsi_band":"50–60","vol_ratio":1.1,"mkt_cap_yi":43.31,"turnover_m":57.39,"pct_from_high":-5.76,"pct_from_low":92.82,"streak":1,"every_day":false,"excel_yellow":false,"pe":14.85,"fwd_pe":11.27,"target":20.13,"upside_pct":17.2,"rating":"未有共識","support20":16.46,"resistance":18.0,"earnings":null,"risk":"動能轉弱","risk_level":"中","ema_stack":"交錯","macd_hist":-0.012,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.58,"ret_5d":-2.68,"ret_1m":2.09,"vs_hsi_1d":-2.37,"vs_hsi_5d":-3.68,"vs_hsi_1m":6.3,"vs_hsce_1d":-2.29,"vs_hsce_5d":-4.14,"vs_hsce_1m":4.73,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"1866","yf_ticker":"1866.HK","name":"中國心連心化肥","sector":"原材料","industry":"Agricultural Inputs","date":"2026-10-08","close":10.64,"rsi":53.87,"rsi_band":"50–60","vol_ratio":1.63,"mkt_cap_yi":13.54,"turnover_m":51.34,"pct_from_high":-18.03,"pct_from_low":51.57,"streak":1,"every_day":false,"excel_yellow":false,"pe":9.83,"fwd_pe":5.83,"target":14.29,"upside_pct":34.3,"rating":"未有共識","support20":9.66,"resistance":10.9,"earnings":null,"risk":"化肥週期波動；分析師覆蓋少","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.031,"macd_status":"金叉偏多","has_val":true,"ret_1d":0.75,"ret_5d":4.08,"ret_1m":-2.46,"vs_hsi_1d":-1.04,"vs_hsi_5d":3.08,"vs_hsi_1m":1.75,"vs_hsce_1d":-0.96,"vs_hsce_5d":2.62,"vs_hsce_1m":0.18,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"南向淨買64.8億（證時）；金斯瑞上活躍榜淨賣約5.85億"},{"ticker":"0992","yf_ticker":"0992.HK","name":"聯想集團","sector":"科技","industry":"Computer Hardware","date":"2026-10-07","close":35.16,"rsi":55.53,"rsi_band":"50–60","vol_ratio":0.73,"mkt_cap_yi":436.15,"turnover_m":1318.39,"pct_from_high":-7.18,"pct_from_low":312.68,"streak":1,"every_day":false,"excel_yellow":false,"pe":30.13,"fwd_pe":10.88,"target":46.65,"upside_pct":32.7,"rating":"強力買入","support20":31.2,"resistance":37.58,"earnings":null,"risk":"動能轉弱","risk_level":"中","ema_stack":"交錯","macd_hist":-0.551,"macd_status":"死叉偏空","has_val":true,"ret_1d":1.61,"ret_5d":-4.31,"ret_1m":1.3,"vs_hsi_1d":-0.18,"vs_hsi_5d":-5.31,"vs_hsi_1m":5.51,"vs_hsce_1d":-0.1,"vs_hsce_5d":-5.77,"vs_hsce_1m":3.94,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"1548","yf_ticker":"1548.HK","name":"金斯瑞生物科技","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-07","close":42.9,"rsi":57.66,"rsi_band":"50–60","vol_ratio":1.24,"mkt_cap_yi":97.83,"turnover_m":1179.88,"pct_from_high":-13.26,"pct_from_low":314.09,"streak":1,"every_day":true,"excel_yellow":true,"pe":null,"fwd_pe":75.04,"target":30.67,"upside_pct":-28.5,"rating":"買入","support20":32.36,"resistance":49.14,"earnings":"2027-03-15","risk":"股價高於Yahoo目標價；動能轉弱；10/8南向大額淨賣","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.358,"macd_status":"死叉偏空","has_val":true,"ret_1d":4.18,"ret_5d":-3.02,"ret_1m":25.89,"vs_hsi_1d":2.39,"vs_hsi_5d":-4.02,"vs_hsi_1m":30.1,"vs_hsce_1d":2.47,"vs_hsce_5d":-4.48,"vs_hsce_1m":28.53,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"2269","yf_ticker":"2269.HK","name":"藥明生物","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-07","close":56.7,"rsi":66.73,"rsi_band":"60–70","vol_ratio":0.74,"mkt_cap_yi":233.4,"turnover_m":1034.11,"pct_from_high":-2.24,"pct_from_low":99.09,"streak":1,"every_day":true,"excel_yellow":true,"pe":40.49,"fwd_pe":24.82,"target":58.26,"upside_pct":2.7,"rating":"中性","support20":47.0,"resistance":57.9,"earnings":"2027-03-30","risk":"MACD死叉偏空；高盛中性；CXO板塊消息敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.058,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.46,"ret_5d":-1.28,"ret_1m":10.26,"vs_hsi_1d":-2.25,"vs_hsi_5d":-2.28,"vs_hsi_1m":14.47,"vs_hsce_1d":-2.17,"vs_hsce_5d":-2.74,"vs_hsce_1m":12.9,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"2359","yf_ticker":"2359.HK","name":"藥明康德","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-07","close":218.4,"rsi":66.66,"rsi_band":"60–70","vol_ratio":0.56,"mkt_cap_yi":662.82,"turnover_m":490.86,"pct_from_high":-0.36,"pct_from_low":125.85,"streak":1,"every_day":true,"excel_yellow":true,"pe":25.24,"fwd_pe":19.97,"target":223.51,"upside_pct":2.3,"rating":"強力買入","support20":188.8,"resistance":218.6,"earnings":"2026-10-22","risk":"動能轉弱；貼近高位；10/22業績；生物安全法案風險","risk_level":"中高","ema_stack":"多頭排列","macd_hist":-0.257,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.48,"ret_5d":-0.95,"ret_1m":7.66,"vs_hsi_1d":-2.27,"vs_hsi_5d":-1.95,"vs_hsi_1m":11.87,"vs_hsce_1d":-2.19,"vs_hsce_5d":-2.41,"vs_hsce_1m":10.3,"ah_code":"603259.SS","ah_premium_pct":20.93,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"1093","yf_ticker":"1093.HK","name":"石藥集團","sector":"醫療保健","industry":"Drug Manufacturers - General","date":"2026-10-07","close":9.81,"rsi":58.55,"rsi_band":"50–60","vol_ratio":0.49,"mkt_cap_yi":111.94,"turnover_m":332.54,"pct_from_high":-10.45,"pct_from_low":50.31,"streak":1,"every_day":false,"excel_yellow":false,"pe":12.45,"fwd_pe":13.63,"target":12.64,"upside_pct":28.9,"rating":"買入","support20":8.7,"resistance":10.07,"earnings":null,"risk":"動能轉弱","risk_level":"中","ema_stack":"交錯","macd_hist":-0.042,"macd_status":"死叉偏空","has_val":true,"ret_1d":-2.15,"ret_5d":-8.51,"ret_1m":-0.16,"vs_hsi_1d":-3.94,"vs_hsi_5d":-9.51,"vs_hsi_1m":4.05,"vs_hsce_1d":-3.86,"vs_hsce_5d":-9.97,"vs_hsce_1m":2.48,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"2268","yf_ticker":"2268.HK","name":"藥明合聯","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-07","close":84.0,"rsi":66.72,"rsi_band":"60–70","vol_ratio":0.6,"mkt_cap_yi":106.37,"turnover_m":165.95,"pct_from_high":-1.75,"pct_from_low":93.1,"streak":1,"every_day":true,"excel_yellow":true,"pe":64.14,"fwd_pe":32.17,"target":92.31,"upside_pct":9.9,"rating":"強力買入","support20":72.1,"resistance":84.2,"earnings":"2027-03-29","risk":"動能轉弱；海外收入高、生物安全法案敏感","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.133,"macd_status":"死叉偏空","has_val":true,"ret_1d":-0.18,"ret_5d":1.86,"ret_1m":10.35,"vs_hsi_1d":-1.97,"vs_hsi_5d":0.86,"vs_hsi_1m":14.56,"vs_hsce_1d":-1.89,"vs_hsce_5d":0.4,"vs_hsce_1m":12.99,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"1308","yf_ticker":"1308.HK","name":"海豐國際","sector":"工業","industry":"Marine Shipping","date":"2026-10-07","close":48.98,"rsi":60.91,"rsi_band":"60–70","vol_ratio":0.73,"mkt_cap_yi":131.79,"turnover_m":150.52,"pct_from_high":-2.04,"pct_from_low":91.03,"streak":1,"every_day":true,"excel_yellow":true,"pe":13.64,"fwd_pe":13.99,"target":44.26,"upside_pct":-9.6,"rating":"買入","support20":45.36,"resistance":50.05,"earnings":"2027-03-10","risk":"動能轉弱；高於目標價；貼近52周高","risk_level":"中","ema_stack":"多頭排列","macd_hist":-0.043,"macd_status":"死叉偏空","has_val":true,"ret_1d":1.11,"ret_5d":4.71,"ret_1m":10.98,"vs_hsi_1d":-0.68,"vs_hsi_5d":3.71,"vs_hsi_1m":15.19,"vs_hsce_1d":-0.6,"vs_hsce_5d":3.25,"vs_hsce_1m":13.62,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"1138","yf_ticker":"1138.HK","name":"中遠海能","sector":"能源","industry":"Oil & Gas Midstream","date":"2026-10-07","close":20.3,"rsi":63.81,"rsi_band":"60–70","vol_ratio":0.45,"mkt_cap_yi":111.07,"turnover_m":136.61,"pct_from_high":-9.38,"pct_from_low":143.41,"streak":1,"every_day":true,"excel_yellow":true,"pe":15.12,"fwd_pe":7.35,"target":24.52,"upside_pct":20.8,"rating":"強力買入","support20":17.82,"resistance":21.32,"earnings":null,"risk":"運價同地緣政治波動大；AH折價約17%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.099,"macd_status":"金叉偏多","has_val":true,"ret_1d":2.01,"ret_5d":11.33,"ret_1m":14.79,"vs_hsi_1d":0.22,"vs_hsi_5d":10.33,"vs_hsi_1m":19.0,"vs_hsce_1d":0.3,"vs_hsce_5d":9.87,"vs_hsce_1m":17.43,"ah_code":"600026.SS","ah_premium_pct":-16.73,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"3396","yf_ticker":"3396.HK","name":"聯想控股","sector":"科技","industry":"Computer Hardware","date":"2026-10-07","close":24.44,"rsi":61.6,"rsi_band":"60–70","vol_ratio":0.39,"mkt_cap_yi":57.59,"turnover_m":80.3,"pct_from_high":-6.79,"pct_from_low":214.95,"streak":1,"every_day":false,"excel_yellow":false,"pe":19.07,"fwd_pe":3.56,"target":23.35,"upside_pct":-4.5,"rating":"未有共識","support20":18.33,"resistance":26.16,"earnings":null,"risk":"動能轉弱；高於目標價","risk_level":"高","ema_stack":"交錯","macd_hist":-0.439,"macd_status":"死叉偏空","has_val":true,"ret_1d":-1.27,"ret_5d":-9.42,"ret_1m":14.54,"vs_hsi_1d":-3.06,"vs_hsi_5d":-10.42,"vs_hsi_1m":18.75,"vs_hsce_1d":-2.98,"vs_hsce_5d":-10.88,"vs_hsce_1m":17.18,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"3759","yf_ticker":"3759.HK","name":"康龍化成","sector":"醫療保健","industry":"Biotechnology","date":"2026-10-07","close":32.16,"rsi":60.76,"rsi_band":"60–70","vol_ratio":0.63,"mkt_cap_yi":59.09,"turnover_m":77.99,"pct_from_high":-7.75,"pct_from_low":122.56,"streak":1,"every_day":true,"excel_yellow":true,"pe":28.87,"fwd_pe":18.26,"target":39.73,"upside_pct":23.5,"rating":"買入","support20":27.54,"resistance":32.94,"earnings":"2026-10-27","risk":"10/27業績臨近；AH折價約35%","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.005,"macd_status":"金叉偏多","has_val":true,"ret_1d":-2.11,"ret_5d":-0.65,"ret_1m":6.47,"vs_hsi_1d":-3.9,"vs_hsi_5d":-1.65,"vs_hsi_1m":10.68,"vs_hsce_1d":-3.82,"vs_hsce_5d":-2.11,"vs_hsce_1m":9.11,"ah_code":"300759.SZ","ah_premium_pct":-34.88,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"6127","yf_ticker":"6127.HK","name":"昭衍新藥","sector":"醫療保健","industry":"Diagnostics & Research","date":"2026-10-07","close":29.5,"rsi":60.77,"rsi_band":"60–70","vol_ratio":0.58,"mkt_cap_yi":22.11,"turnover_m":62.2,"pct_from_high":-9.45,"pct_from_low":94.98,"streak":1,"every_day":true,"excel_yellow":true,"pe":21.31,"fwd_pe":103.13,"target":24.93,"upside_pct":-15.5,"rating":"買入","support20":21.2,"resistance":32.2,"earnings":null,"risk":"股價高於目標價；AH大幅折價（港股平A股）","risk_level":"中","ema_stack":"多頭排列","macd_hist":0.403,"macd_status":"金叉偏多","has_val":true,"ret_1d":4.12,"ret_5d":2.96,"ret_1m":38.34,"vs_hsi_1d":2.33,"vs_hsi_5d":1.96,"vs_hsi_1m":42.55,"vs_hsce_1d":2.41,"vs_hsce_5d":1.5,"vs_hsce_1m":40.98,"ah_code":"603127.SS","ah_premium_pct":-45.37,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"},{"ticker":"0622","yf_ticker":"0622.HK","name":"威華達控股","sector":"金融","industry":"Capital Markets","date":"2026-10-07","close":3.1,"rsi":58.27,"rsi_band":"50–60","vol_ratio":0.87,"mkt_cap_yi":21.52,"turnover_m":56.9,"pct_from_high":-4.47,"pct_from_low":559.57,"streak":1,"every_day":false,"excel_yellow":false,"pe":50.25,"fwd_pe":null,"target":null,"upside_pct":null,"rating":"未有共識","support20":2.82,"resistance":3.15,"earnings":null,"risk":"動能轉弱","risk_level":"中","ema_stack":"交錯","macd_hist":-0.021,"macd_status":"死叉偏空","has_val":true,"ret_1d":-1.31,"ret_5d":-3.52,"ret_1m":8.45,"vs_hsi_1d":-3.1,"vs_hsi_5d":-4.52,"vs_hsi_1m":12.66,"vs_hsce_1d":-3.02,"vs_hsce_5d":-4.98,"vs_hsce_1m":11.09,"ah_code":null,"ah_premium_pct":null,"southbound":null,"northbound_note":"國慶後淡靜；南向全日數據以公開來源為準"}],"performance":[{"ticker":"1566","yf_ticker":"1566.HK","name":"華夏文化科技","sector":"通訊服務","first_date":"2026-10-08","first_close":6.16,"last_date":"2026-10-09","last_close":6.7,"abs_ret":0.54,"ret_pct":8.77,"hold_days":1,"pick_days":1,"hsi_ret_pct":1.79,"excess_hsi_pct":6.98,"hsce_ret_pct":1.71,"excess_hsce_pct":7.06,"every_day":false},{"ticker":"6127","yf_ticker":"6127.HK","name":"昭衍新藥","sector":"醫療保健","first_date":"2026-10-07","first_close":29.5,"last_date":"2026-10-09","last_close":31.32,"abs_ret":1.82,"ret_pct":6.17,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":5.83,"hsce_ret_pct":0.81,"excess_hsce_pct":5.36,"every_day":true},{"ticker":"1138","yf_ticker":"1138.HK","name":"中遠海能","sector":"能源","first_date":"2026-10-07","first_close":20.3,"last_date":"2026-10-09","last_close":21.32,"abs_ret":1.02,"ret_pct":5.02,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":4.68,"hsce_ret_pct":0.81,"excess_hsce_pct":4.21,"every_day":true},{"ticker":"1308","yf_ticker":"1308.HK","name":"海豐國際","sector":"工業","first_date":"2026-10-07","first_close":48.98,"last_date":"2026-10-09","last_close":50.05,"abs_ret":1.07,"ret_pct":2.18,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":1.84,"hsce_ret_pct":0.81,"excess_hsce_pct":1.37,"every_day":true},{"ticker":"1866","yf_ticker":"1866.HK","name":"中國心連心化肥","sector":"原材料","first_date":"2026-10-08","first_close":10.64,"last_date":"2026-10-09","last_close":10.72,"abs_ret":0.08,"ret_pct":0.75,"hold_days":1,"pick_days":2,"hsi_ret_pct":1.79,"excess_hsi_pct":-1.04,"hsce_ret_pct":1.71,"excess_hsce_pct":-0.96,"every_day":false},{"ticker":"2162","yf_ticker":"2162.HK","name":"康諾亞－Ｂ","sector":"醫療保健","first_date":"2026-10-09","first_close":78.3,"last_date":"2026-10-09","last_close":78.3,"abs_ret":0.0,"ret_pct":0.0,"hold_days":0,"pick_days":1,"hsi_ret_pct":0.0,"excess_hsi_pct":0.0,"hsce_ret_pct":0.0,"excess_hsce_pct":0.0,"every_day":false},{"ticker":"1797","yf_ticker":"1797.HK","name":"東方甄選","sector":"必須消費","first_date":"2026-10-09","first_close":26.52,"last_date":"2026-10-09","last_close":26.52,"abs_ret":0.0,"ret_pct":0.0,"hold_days":0,"pick_days":1,"hsi_ret_pct":0.0,"excess_hsi_pct":0.0,"hsce_ret_pct":0.0,"excess_hsce_pct":0.0,"every_day":false},{"ticker":"1997","yf_ticker":"1997.HK","name":"九龍倉置業","sector":"地產","first_date":"2026-10-09","first_close":30.72,"last_date":"2026-10-09","last_close":30.72,"abs_ret":0.0,"ret_pct":0.0,"hold_days":0,"pick_days":1,"hsi_ret_pct":0.0,"excess_hsi_pct":0.0,"hsce_ret_pct":0.0,"excess_hsce_pct":0.0,"every_day":false},{"ticker":"0019","yf_ticker":"0019.HK","name":"太古股份公司Ａ","sector":"工業","first_date":"2026-10-09","first_close":102.1,"last_date":"2026-10-09","last_close":102.1,"abs_ret":0.0,"ret_pct":0.0,"hold_days":0,"pick_days":1,"hsi_ret_pct":0.0,"excess_hsi_pct":0.0,"hsce_ret_pct":0.0,"excess_hsce_pct":0.0,"every_day":false},{"ticker":"2285","yf_ticker":"2285.HK","name":"泉峰控股","sector":"工業","first_date":"2026-10-09","first_close":30.74,"last_date":"2026-10-09","last_close":30.74,"abs_ret":0.0,"ret_pct":0.0,"hold_days":0,"pick_days":1,"hsi_ret_pct":0.0,"excess_hsi_pct":0.0,"hsce_ret_pct":0.0,"excess_hsce_pct":0.0,"every_day":false},{"ticker":"1070","yf_ticker":"1070.HK","name":"ＴＣＬ電子","sector":"科技","first_date":"2026-10-08","first_close":17.18,"last_date":"2026-10-09","last_close":17.08,"abs_ret":-0.1,"ret_pct":-0.58,"hold_days":1,"pick_days":1,"hsi_ret_pct":1.79,"excess_hsi_pct":-2.37,"hsce_ret_pct":1.71,"excess_hsce_pct":-2.29,"every_day":false},{"ticker":"2315","yf_ticker":"2315.HK","name":"百奧賽圖－Ｂ","sector":"醫療保健","first_date":"2026-10-08","first_close":70.0,"last_date":"2026-10-09","last_close":69.2,"abs_ret":-0.8,"ret_pct":-1.14,"hold_days":1,"pick_days":2,"hsi_ret_pct":1.79,"excess_hsi_pct":-2.93,"hsce_ret_pct":1.71,"excess_hsce_pct":-2.85,"every_day":false},{"ticker":"1548","yf_ticker":"1548.HK","name":"金斯瑞生物科技","sector":"醫療保健","first_date":"2026-10-07","first_close":42.9,"last_date":"2026-10-09","last_close":42.4,"abs_ret":-0.5,"ret_pct":-1.17,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":-1.51,"hsce_ret_pct":0.81,"excess_hsce_pct":-1.98,"every_day":true},{"ticker":"2268","yf_ticker":"2268.HK","name":"藥明合聯","sector":"醫療保健","first_date":"2026-10-07","first_close":84.0,"last_date":"2026-10-09","last_close":82.1,"abs_ret":-1.9,"ret_pct":-2.26,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":-2.6,"hsce_ret_pct":0.81,"excess_hsce_pct":-3.07,"every_day":true},{"ticker":"0805","yf_ticker":"0805.HK","name":"新吉奧房車","sector":"非必須消費","first_date":"2026-10-08","first_close":12.8,"last_date":"2026-10-09","last_close":12.49,"abs_ret":-0.31,"ret_pct":-2.42,"hold_days":1,"pick_days":1,"hsi_ret_pct":1.79,"excess_hsi_pct":-4.21,"hsce_ret_pct":1.71,"excess_hsce_pct":-4.13,"every_day":false},{"ticker":"0622","yf_ticker":"0622.HK","name":"威華達控股","sector":"金融","first_date":"2026-10-07","first_close":3.1,"last_date":"2026-10-09","last_close":3.02,"abs_ret":-0.08,"ret_pct":-2.74,"hold_days":2,"pick_days":2,"hsi_ret_pct":0.34,"excess_hsi_pct":-3.08,"hsce_ret_pct":0.81,"excess_hsce_pct":-3.55,"every_day":false},{"ticker":"2359","yf_ticker":"2359.HK","name":"藥明康德","sector":"醫療保健","first_date":"2026-10-07","first_close":218.4,"last_date":"2026-10-09","last_close":208.0,"abs_ret":-10.4,"ret_pct":-4.76,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":-5.1,"hsce_ret_pct":0.81,"excess_hsce_pct":-5.57,"every_day":true},{"ticker":"3759","yf_ticker":"3759.HK","name":"康龍化成","sector":"醫療保健","first_date":"2026-10-07","first_close":32.16,"last_date":"2026-10-09","last_close":30.6,"abs_ret":-1.56,"ret_pct":-4.85,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":-5.19,"hsce_ret_pct":0.81,"excess_hsce_pct":-5.66,"every_day":true},{"ticker":"6821","yf_ticker":"6821.HK","name":"凱萊英","sector":"醫療保健","first_date":"2026-10-08","first_close":163.0,"last_date":"2026-10-09","last_close":155.1,"abs_ret":-7.9,"ret_pct":-4.85,"hold_days":1,"pick_days":1,"hsi_ret_pct":1.79,"excess_hsi_pct":-6.64,"hsce_ret_pct":1.71,"excess_hsce_pct":-6.56,"every_day":false},{"ticker":"2269","yf_ticker":"2269.HK","name":"藥明生物","sector":"醫療保健","first_date":"2026-10-07","first_close":56.7,"last_date":"2026-10-09","last_close":53.85,"abs_ret":-2.85,"ret_pct":-5.03,"hold_days":2,"pick_days":3,"hsi_ret_pct":0.34,"excess_hsi_pct":-5.37,"hsce_ret_pct":0.81,"excess_hsce_pct":-5.84,"every_day":true},{"ticker":"0992","yf_ticker":"0992.HK","name":"聯想集團","sector":"科技","first_date":"2026-10-07","first_close":35.16,"last_date":"2026-10-09","last_close":32.84,"abs_ret":-2.32,"ret_pct":-6.6,"hold_days":2,"pick_days":1,"hsi_ret_pct":0.34,"excess_hsi_pct":-6.94,"hsce_ret_pct":0.81,"excess_hsce_pct":-7.41,"every_day":false},{"ticker":"1093","yf_ticker":"1093.HK","name":"石藥集團","sector":"醫療保健","first_date":"2026-10-07","first_close":9.81,"last_date":"2026-10-09","last_close":9.09,"abs_ret":-0.72,"ret_pct":-7.39,"hold_days":2,"pick_days":1,"hsi_ret_pct":0.34,"excess_hsi_pct":-7.73,"hsce_ret_pct":0.81,"excess_hsce_pct":-8.2,"every_day":false},{"ticker":"3396","yf_ticker":"3396.HK","name":"聯想控股","sector":"科技","first_date":"2026-10-07","first_close":24.44,"last_date":"2026-10-09","last_close":21.74,"abs_ret":-2.7,"ret_pct":-11.05,"hold_days":2,"pick_days":1,"hsi_ret_pct":0.34,"excess_hsi_pct":-11.39,"hsce_ret_pct":0.81,"excess_hsce_pct":-11.86,"every_day":false}],"risks":[{"ticker":"1308","date":"2026-10-09","name":"海豐國際","sector":"工業","close":50.05,"rsi":64.94,"target":44.26,"earnings":null,"flags":"高於目標價；動能轉弱","severity":"高","val_risk":"動能轉弱；高於目標價；貼近52周高","note":"較目標高 11.6%；MACD柱=-0.043","every_day":true},{"ticker":"1548","date":"2026-10-09","name":"金斯瑞生物科技","sector":"醫療保健","close":42.4,"rsi":56.12,"target":30.67,"earnings":null,"flags":"高於目標價；動能轉弱","severity":"高","val_risk":"動能轉弱；高於目標價","note":"較目標高 27.7%；MACD柱=-0.358","every_day":true},{"ticker":"2285","date":"2026-10-09","name":"泉峰控股","sector":"工業","close":30.74,"rsi":71.88,"target":29.65,"earnings":null,"flags":"RSI超買；高於目標價","severity":"高","val_risk":"RSI超買；高於目標價","note":"RSI=71.88；較目標高 3.5%","every_day":false},{"ticker":"3396","date":"2026-10-07","name":"聯想控股","sector":"科技","close":24.44,"rsi":61.6,"target":23.35,"earnings":null,"flags":"高於目標價；動能轉弱","severity":"高","val_risk":"動能轉弱；高於目標價","note":"較目標高 4.5%；MACD柱=-0.439","every_day":false},{"ticker":"6821","date":"2026-10-08","name":"凱萊英","sector":"醫療保健","close":163.0,"rsi":58.79,"target":150.07,"earnings":null,"flags":"高於目標價；動能轉弱","severity":"高","val_risk":"動能轉弱；高於目標價","note":"較目標高 7.9%；MACD柱=-1.271","every_day":false},{"ticker":"0019","date":"2026-10-09","name":"太古股份公司Ａ","sector":"工業","close":102.1,"rsi":50.27,"target":106.91,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.267","every_day":false},{"ticker":"0622","date":"2026-10-08","name":"威華達控股","sector":"金融","close":3.06,"rsi":54.96,"target":null,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.021","every_day":false},{"ticker":"0992","date":"2026-10-07","name":"聯想集團","sector":"科技","close":35.16,"rsi":55.53,"target":46.65,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.551","every_day":false},{"ticker":"1070","date":"2026-10-08","name":"ＴＣＬ電子","sector":"科技","close":17.18,"rsi":51.95,"target":20.13,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.012","every_day":false},{"ticker":"1093","date":"2026-10-07","name":"石藥集團","sector":"醫療保健","close":9.81,"rsi":58.55,"target":12.64,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.042","every_day":false},{"ticker":"1566","date":"2026-10-08","name":"華夏文化科技","sector":"通訊服務","close":6.16,"rsi":73.3,"target":null,"earnings":null,"flags":"RSI超買","severity":"中","val_risk":"RSI超買","note":"RSI=73.3","every_day":false},{"ticker":"1797","date":"2026-10-09","name":"東方甄選","sector":"必須消費","close":26.52,"rsi":56.93,"target":28.84,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.099","every_day":false},{"ticker":"1997","date":"2026-10-09","name":"九龍倉置業","sector":"地產","close":30.72,"rsi":52.64,"target":35.38,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.081","every_day":false},{"ticker":"2268","date":"2026-10-09","name":"藥明合聯","sector":"醫療保健","close":82.1,"rsi":61.01,"target":92.31,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.133","every_day":true},{"ticker":"2269","date":"2026-10-09","name":"藥明生物","sector":"醫療保健","close":53.85,"rsi":55.58,"target":58.26,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.058","every_day":true},{"ticker":"2315","date":"2026-10-09","name":"百奧賽圖－Ｂ","sector":"醫療保健","close":69.2,"rsi":53.08,"target":62.86,"earnings":null,"flags":"高於目標價","severity":"中","val_risk":"高於目標價","note":"較目標高 9.2%","every_day":false},{"ticker":"2359","date":"2026-10-09","name":"藥明康德","sector":"醫療保健","close":208.0,"rsi":53.97,"target":223.51,"earnings":null,"flags":"動能轉弱","severity":"中","val_risk":"動能轉弱","note":"MACD柱=-0.257","every_day":true},{"ticker":"6127","date":"2026-10-09","name":"昭衍新藥","sector":"醫療保健","close":31.32,"rsi":65.75,"target":24.93,"earnings":null,"flags":"高於目標價","severity":"中","val_risk":"高於目標價","note":"較目標高 20.4%","every_day":true}],"ops":[{"priority":1,"ticker":"1138","date":"2026-10-09","focus":"連續3日入選（黃底）；MACD：金叉偏多","support20":17.82,"resistance":21.32,"earnings":null,"action":"留意支持 17.82；阻力 21.32；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"1308","date":"2026-10-09","focus":"連續3日入選（黃底）；動能轉弱；高於目標價；貼近52周高；MACD：死叉偏空","support20":45.36,"resistance":50.05,"earnings":"2027-03-10","action":"留意支持 45.36；阻力 50.05；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"1548","date":"2026-10-09","focus":"連續3日入選（黃底）；動能轉弱；高於目標價；MACD：死叉偏空","support20":32.36,"resistance":49.14,"earnings":"2027-03-15","action":"留意支持 32.36；阻力 49.14；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"2268","date":"2026-10-09","focus":"連續3日入選（黃底）；動能轉弱；MACD：死叉偏空","support20":72.1,"resistance":84.2,"earnings":"2027-03-29","action":"留意支持 72.1；阻力 84.2；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"2269","date":"2026-10-09","focus":"連續3日入選（黃底）；動能轉弱；MACD：死叉偏空","support20":47.0,"resistance":57.9,"earnings":"2027-03-30","action":"留意支持 47.0；阻力 57.9；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"2359","date":"2026-10-09","focus":"連續3日入選（黃底）；動能轉弱；MACD：死叉偏空","support20":188.8,"resistance":218.6,"earnings":"2026-10-22","action":"留意支持 188.8；阻力 218.6；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"3759","date":"2026-10-09","focus":"連續3日入選（黃底）；MACD：金叉偏多","support20":27.54,"resistance":32.94,"earnings":"2026-10-27","action":"留意支持 27.54；阻力 32.94；南北水見詳情欄","every_day":true},{"priority":1,"ticker":"6127","date":"2026-10-09","focus":"連續3日入選（黃底）；高於目標價；MACD：金叉偏多","support20":21.2,"resistance":32.2,"earnings":null,"action":"留意支持 21.2；阻力 32.2；南北水見詳情欄","every_day":true},{"priority":2,"ticker":"0019","date":"2026-10-09","focus":"動能轉弱；MACD：死叉偏空","support20":99.7,"resistance":103.9,"earnings":"2027-03-11","action":"留意支持 99.7；阻力 103.9；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"0622","date":"2026-10-08","focus":"入選2日；動能轉弱；MACD：死叉偏空","support20":2.82,"resistance":3.15,"earnings":null,"action":"留意支持 2.82；阻力 3.15；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"0992","date":"2026-10-07","focus":"動能轉弱；MACD：死叉偏空","support20":31.2,"resistance":37.58,"earnings":null,"action":"留意支持 31.2；阻力 37.58；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"1070","date":"2026-10-08","focus":"動能轉弱；MACD：死叉偏空","support20":16.46,"resistance":18.0,"earnings":null,"action":"留意支持 16.46；阻力 18.0；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"1093","date":"2026-10-07","focus":"動能轉弱；MACD：死叉偏空","support20":8.7,"resistance":10.07,"earnings":null,"action":"留意支持 8.7；阻力 10.07；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"1566","date":"2026-10-08","focus":"RSI超買；MACD：金叉偏多","support20":3.85,"resistance":6.7,"earnings":null,"action":"留意支持 3.85；阻力 6.7；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"1797","date":"2026-10-09","focus":"動能轉弱；MACD：死叉偏空","support20":23.9,"resistance":27.08,"earnings":"2027-01-19","action":"留意支持 23.9；阻力 27.08；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"1997","date":"2026-10-09","focus":"動能轉弱；MACD：死叉偏空","support20":29.46,"resistance":31.04,"earnings":"2027-03-10","action":"留意支持 29.46；阻力 31.04；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"2285","date":"2026-10-09","focus":"RSI超買；高於目標價；MACD：金叉偏多","support20":24.6,"resistance":31.54,"earnings":null,"action":"留意支持 24.6；阻力 31.54；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"2315","date":"2026-10-09","focus":"入選2日；高於目標價；MACD：金叉偏多","support20":56.1,"resistance":79.7,"earnings":null,"action":"留意支持 56.1；阻力 79.7；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"3396","date":"2026-10-07","focus":"動能轉弱；高於目標價；MACD：死叉偏空","support20":18.33,"resistance":26.16,"earnings":null,"action":"留意支持 18.33；阻力 26.16；南北水見詳情欄","every_day":false},{"priority":2,"ticker":"6821","date":"2026-10-08","focus":"動能轉弱；高於目標價；MACD：死叉偏空","support20":134.2,"resistance":170.7,"earnings":null,"action":"留意支持 134.2；阻力 170.7；南北水見詳情欄","every_day":false},{"priority":3,"ticker":"0805","date":"2026-10-08","focus":"MACD：金叉偏多","support20":8.16,"resistance":12.89,"earnings":null,"action":"留意支持 8.16；阻力 12.89；南北水見詳情欄","every_day":false},{"priority":3,"ticker":"1866","date":"2026-10-09","focus":"入選2日；MACD：金叉偏多","support20":9.66,"resistance":10.9,"earnings":null,"action":"留意支持 9.66；阻力 10.9；南北水見詳情欄","every_day":false},{"priority":3,"ticker":"2162","date":"2026-10-09","focus":"MACD：金叉偏多","support20":72.05,"resistance":81.55,"earnings":null,"action":"留意支持 72.05；阻力 81.55；南北水見詳情欄","every_day":false}],"earnings_countdown":[{"ticker":"2359","name":"藥明康德","earnings":"2026-10-22","days":13,"sector":"醫療保健","risk":"動能轉弱；貼近高位；10/22業績；生物安全法案風險"},{"ticker":"3759","name":"康龍化成","earnings":"2026-10-27","days":18,"sector":"醫療保健","risk":"10/27業績臨近；AH折價約35%"}],"multi_day_stats":[{"ticker":"2269","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2359","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1548","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1138","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2268","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"6127","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"1308","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"3759","pick_days":3,"last_date":"2026-10-09","today":true,"every_day":true,"streak":3},{"ticker":"2315","pick_days":2,"last_date":"2026-10-09","today":true,"every_day":false,"streak":2},{"ticker":"1866","pick_days":2,"last_date":"2026-10-09","today":true,"every_day":false,"streak":2},{"ticker":"0622","pick_days":2,"last_date":"2026-10-08","today":false,"every_day":false,"streak":2},{"ticker":"2162","pick_days":1,"last_date":"2026-10-09","today":true,"every_day":false,"streak":1},{"ticker":"1797","pick_days":1,"last_date":"2026-10-09","today":true,"every_day":false,"streak":1},{"ticker":"1997","pick_days":1,"last_date":"2026-10-09","today":true,"every_day":false,"streak":1},{"ticker":"0019","pick_days":1,"last_date":"2026-10-09","today":true,"every_day":false,"streak":1},{"ticker":"2285","pick_days":1,"last_date":"2026-10-09","today":true,"every_day":false,"streak":1},{"ticker":"1566","pick_days":1,"last_date":"2026-10-08","today":false,"every_day":false,"streak":1},{"ticker":"6821","pick_days":1,"last_date":"2026-10-08","today":false,"every_day":false,"streak":1},{"ticker":"0805","pick_days":1,"last_date":"2026-10-08","today":false,"every_day":false,"streak":1},{"ticker":"1070","pick_days":1,"last_date":"2026-10-08","today":false,"every_day":false,"streak":1},{"ticker":"0992","pick_days":1,"last_date":"2026-10-07","today":false,"every_day":false,"streak":1},{"ticker":"1093","pick_days":1,"last_date":"2026-10-07","today":false,"every_day":false,"streak":1},{"ticker":"3396","pick_days":1,"last_date":"2026-10-07","today":false,"every_day":false,"streak":1}],"date_matrix":{"2269":{"2026-10-09":53.85,"2026-10-08":54.1,"2026-10-07":56.7},"2359":{"2026-10-09":208.0,"2026-10-08":209.0,"2026-10-07":218.4},"1548":{"2026-10-09":42.4,"2026-10-08":40.7,"2026-10-07":42.9},"1138":{"2026-10-09":21.32,"2026-10-08":20.9,"2026-10-07":20.3},"2268":{"2026-10-09":82.1,"2026-10-08":82.25,"2026-10-07":84.0},"6127":{"2026-10-09":31.32,"2026-10-08":30.08,"2026-10-07":29.5},"1308":{"2026-10-09":50.05,"2026-10-08":49.5,"2026-10-07":48.98},"3759":{"2026-10-09":30.6,"2026-10-08":31.26,"2026-10-07":32.16},"2162":{"2026-10-09":78.3},"1797":{"2026-10-09":26.52},"2315":{"2026-10-09":69.2,"2026-10-08":70.0},"1997":{"2026-10-09":30.72},"0019":{"2026-10-09":102.1},"2285":{"2026-10-09":30.74},"1866":{"2026-10-09":10.72,"2026-10-08":10.64},"1566":{"2026-10-08":6.16},"6821":{"2026-10-08":163.0},"0805":{"2026-10-08":12.8},"0622":{"2026-10-08":3.06,"2026-10-07":3.1},"1070":{"2026-10-08":17.18},"0992":{"2026-10-07":35.16},"1093":{"2026-10-07":9.81},"3396":{"2026-10-07":24.44}}};
+
+const fmt = (n, d=2) => n==null || Number.isNaN(n) ? '—' : Number(n).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
+const fmtPct = (n) => n==null ? '—' : ((n>0?'+':'')+fmt(n,1)+'%');
+const sevClass = s => s==='高'?'high':s==='中'?'mid':'low';
+const AS_OF = DATA.meta.as_of || DATA.meta.latest_date;
+
+document.getElementById('metaSub').textContent =
+  `擁有人：${DATA.meta.owner}　｜　更新：${DATA.meta.updated}　｜　最新入選／收市日：${DATA.meta.latest_date}　｜　as-of：${AS_OF}`;
+document.getElementById('metaBadge').textContent = `今日 ${DATA.kpis.today_count} 隻 · 每日入選 ${DATA.kpis.every_day_count} 隻 · 估值 ${DATA.kpis.valuation_unique}`;
+document.getElementById('disclaimer').textContent = '⚠ 免責聲明：' + DATA.meta.disclaimer;
+
+// Tabs (+ URL sync Round 2)
+let _urlSilent = false;
+function activateTab(id, skipUrl){
+  const btn=document.querySelector(`.tab[data-tab="${id}"]`);
+  if(!btn) return;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel=document.getElementById('panel-'+id);
+  if(panel) panel.classList.add('active');
+  setTimeout(()=>window.dispatchEvent(new Event('resize')), 50);
+  if(!skipUrl && !_urlSilent) writeUrlState();
+}
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>activateTab(btn.dataset.tab));
+});
+function goTab(id){ activateTab(id); }
+
+// Latest pick per ticker
+const latestByTicker = {};
+DATA.picks.forEach(p=>{
+  if(!latestByTicker[p.ticker] || p.date > latestByTicker[p.ticker].date) latestByTicker[p.ticker]=p;
+});
+const perfByTicker = {};
+DATA.performance.forEach(p=>{ perfByTicker[p.ticker]=p; });
+const riskByKey = {};
+DATA.risks.forEach(r=>{ if(r.ticker) riskByKey[r.ticker+'|'+r.date]=r; });
+
+// —— Detail drawer (fields map 入選股分析) ——
+const drawer = document.getElementById('drawer');
+const drawerBd = document.getElementById('drawerBd');
+function closeDrawer(){
+  drawer.classList.remove('open'); drawerBd.classList.remove('open');
+  drawer.setAttribute('aria-hidden','true');
+}
+document.getElementById('drClose').onclick = closeDrawer;
+drawerBd.onclick = closeDrawer;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+function openDrawer(p){
+  if(!p) return;
+  document.getElementById('drTicker').textContent = p.ticker;
+  document.getElementById('drName').textContent = `${p.name||''} · ${p.sector||'—'} · 入選 ${p.date}`;
+  const rk = riskByKey[p.ticker+'|'+p.date];
+  const perf = perfByTicker[p.ticker];
+  const days = (()=>{
+    if(!p.earnings) return null;
+    const a=new Date(AS_OF+'T00:00:00'), b=new Date(p.earnings+'T00:00:00');
+    return Math.round((b-a)/86400000);
+  })();
+  const flags = [];
+  if(p.risk && p.risk!=='暫無特別警示'){
+    String(p.risk).split(/[；;]/).map(s=>s.trim()).filter(Boolean).forEach(f=>flags.push(f));
+  }
+  if(rk && rk.flags){
+    String(rk.flags).split(/[；;]/).map(s=>s.trim()).filter(Boolean).forEach(f=>{
+      if(!flags.includes(f)) flags.push(f);
+    });
+  }
+  const flagHtml = flags.length
+    ? flags.map(f=>{
+        const hi = /超買|高於目標|業績臨近|利潤率為負|偏高/.test(f);
+        return `<span class="flag ${hi?'high':''}">${f}</span>`;
+      }).join('')
+    : '<span class="flag ok">暫無特別警示</span>';
+
+  document.getElementById('drBody').innerHTML = `
+    <div class="drawer-sec">
+      <h4>估值 Valuation（yfinance／分析師補齊）</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">市盈率</div><div class="v">${p.pe==null?'—':fmt(p.pe,1)}</div></div>
+        <div class="cell"><div class="lab">預測市盈率</div><div class="v">${p.fwd_pe==null?'—':fmt(p.fwd_pe,1)}</div></div>
+        <div class="cell"><div class="lab">目標價</div><div class="v">${p.target==null?'—':fmt(p.target,2)}</div></div>
+        <div class="cell"><div class="lab">目標上望%</div><div class="v ${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</div></div>
+        <div class="cell"><div class="lab">評級</div><div class="v">${p.rating||'—'}</div></div>
+        <div class="cell"><div class="lab">收市價</div><div class="v">${fmt(p.close)}</div></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <h4>技術 EMA / MACD / RSI</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">RSI14</div><div class="v">${fmt(p.rsi,1)} <span style="font-size:.75rem;color:var(--muted)">${p.rsi_band||''}</span></div></div>
+        <div class="cell"><div class="lab">EMA 排列</div><div class="v">${p.ema_stack||'—'}</div></div>
+        <div class="cell"><div class="lab">MACD 柱</div><div class="v ${p.macd_hist!=null?(p.macd_hist>=0?'up':'down'):''}">${p.macd_hist==null?'—':fmt(p.macd_hist,2)}</div></div>
+        <div class="cell"><div class="lab">量比</div><div class="v">${fmt(p.vol_ratio,2)}</div></div>
+        <div class="cell"><div class="lab">成交額（百萬港元）</div><div class="v">${p.turnover_m==null?'—':fmt(p.turnover_m,1)}</div></div>
+        <div class="cell"><div class="lab">連續入選</div><div class="v">${p.streak??'—'} 日 ${p.every_day?'<span class="pill" style="background:rgba(245,158,11,.25);color:var(--amber)">每日</span>':''}</div></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <h4>港股特色（南北水／AH／相對大盤）</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">南北水</div><div class="v" style="font-size:.9rem;font-weight:600;color:var(--muted)">${p.northbound_note||'待分析師補充'}</div></div>
+        <div class="cell"><div class="lab">AH溢價%</div><div class="v">${p.ah_premium_pct==null?'—（無／待補）':fmt(p.ah_premium_pct,1)+'%'}${p.ah_code?` <span style="font-size:.72rem;color:var(--muted)">${p.ah_code}</span>`:''}</div></div>
+        <div class="cell"><div class="lab">相對恒指 1D／5D／1M</div><div class="v" style="font-size:.9rem">
+          <span class="${(p.vs_hsi_1d||0)>=0?'up':'down'}">${p.vs_hsi_1d==null?'—':fmtPct(p.vs_hsi_1d)}</span>／
+          <span class="${(p.vs_hsi_5d||0)>=0?'up':'down'}">${p.vs_hsi_5d==null?'—':fmtPct(p.vs_hsi_5d)}</span>／
+          <span class="${(p.vs_hsi_1m||0)>=0?'up':'down'}">${p.vs_hsi_1m==null?'—':fmtPct(p.vs_hsi_1m)}</span>
+        </div></div>
+        <div class="cell"><div class="lab">相對國指 1D／5D／1M</div><div class="v" style="font-size:.9rem">
+          <span class="${(p.vs_hsce_1d||0)>=0?'up':'down'}">${p.vs_hsce_1d==null?'—':fmtPct(p.vs_hsce_1d)}</span>／
+          <span class="${(p.vs_hsce_5d||0)>=0?'up':'down'}">${p.vs_hsce_5d==null?'—':fmtPct(p.vs_hsce_5d)}</span>／
+          <span class="${(p.vs_hsce_1m||0)>=0?'up':'down'}">${p.vs_hsce_1m==null?'—':fmtPct(p.vs_hsce_1m)}</span>
+        </div></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <h4>支持 / 阻力</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">20日支持</div><div class="v">${p.support20==null?'—':fmt(p.support20,2)}</div></div>
+        <div class="cell"><div class="lab">阻力</div><div class="v">${p.resistance==null?'—':fmt(p.resistance,2)}</div></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <h4>業績日期</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">業績日</div><div class="v">${p.earnings||'—'}</div></div>
+        <div class="cell"><div class="lab">倒數（as-of ${AS_OF}）</div><div class="v ${days!=null&&days<=14?'warn':''}">${days==null?'—':(days+' 日')}</div></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <h4>風險</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">風險等級</div><div class="v"><span class="pill ${sevClass(p.risk_level)}">${p.risk_level||'—'}</span></div></div>
+        <div class="cell wide"><div class="lab">風險標記</div><div class="risk-flags">${flagHtml}</div>
+          ${rk&&rk.note?`<div class="note" style="margin-top:8px">${rk.note}</div>`:''}
+          ${p.risk?`<div class="note">入選股分析風險欄：${p.risk}</div>`:''}
+        </div>
+      </div>
+    </div>
+    ${perf?`<div class="drawer-sec">
+      <h4>自首選表現（參考）</h4>
+      <div class="kv">
+        <div class="cell"><div class="lab">回報%</div><div class="v ${(perf.ret_pct||0)>=0?'up':'down'}">${fmtPct(perf.ret_pct)}</div></div>
+        <div class="cell"><div class="lab">超額 vs 恒指</div><div class="v ${(perf.excess_hsi_pct||0)>=0?'up':'down'}">${fmtPct(perf.excess_hsi_pct)}</div></div>
+        <div class="cell"><div class="lab">超額 vs 國指</div><div class="v ${(perf.excess_hsce_pct||0)>=0?'up':'down'}">${fmtPct(perf.excess_hsce_pct)}</div></div>
+        <div class="cell"><div class="lab">持有日數</div><div class="v">${perf.hold_days}</div></div>
+      </div>
+    </div>`:''}
+    <div class="note">欄位：市盈率／目標價（yfinance）；南北水／部分評級待港股分析師補充；AH溢價僅已知雙重上市。僅供研究觀察。以上只係資訊，唔係投資建議。</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn primary" id="drAddCmp">加入比較</button>
+      <button type="button" class="btn" id="drGotoCmp">前往比較頁</button>
+    </div>`;
+  drawer.classList.add('open'); drawerBd.classList.add('open');
+  drawer.setAttribute('aria-hidden','false');
+  document.getElementById('drAddCmp').onclick = ()=>{ addCompare(p.ticker); };
+  document.getElementById('drGotoCmp').onclick = ()=>{ addCompare(p.ticker); goTab('compare'); closeDrawer(); };
+}
+
+// —— Compare state ——
+const compareSet = new Set();
+function addCompare(tk){
+  if(compareSet.has(tk)) return;
+  if(compareSet.size>=4){ alert('比較最多 4 隻代號'); return; }
+  compareSet.add(tk);
+  renderCmpChips();
+  if(!_urlSilent) writeUrlState();
+}
+function removeCompare(tk){ compareSet.delete(tk); renderCmpChips(); renderCompare(); if(!_urlSilent) writeUrlState(); }
+function renderCmpChips(){
+  const box=document.getElementById('cmpChips');
+  if(!compareSet.size){ box.innerHTML='<span class="note" style="margin:0">尚未選擇</span>'; return; }
+  box.innerHTML=[...compareSet].map(t=>`<span class="chip-x">${t}<button type="button" data-t="${t}" aria-label="移除">×</button></span>`).join('');
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>removeCompare(b.dataset.t));
+}
+function renderCompare(){
+  const out=document.getElementById('cmpOut');
+  const list=[...compareSet];
+  if(list.length<2){
+    out.innerHTML=`<div class="empty">請選擇 2–4 隻代號以並排比較（已選 ${list.length}）</div>`;
+    return;
+  }
+  const metrics=[
+    ['行業','sector',v=>v||'—'],
+    ['入選日','date',v=>v||'—'],
+    ['收市價','close',v=>fmt(v)],
+    ['成交額(百萬)','turnover_m',v=>v==null?'—':fmt(v,1)],
+    ['市盈率','pe',v=>v==null?'—':fmt(v,1)],
+    ['預測市盈率','fwd_pe',v=>v==null?'—':fmt(v,1)],
+    ['目標價','target',v=>v==null?'—':fmt(v,2)],
+    ['目標上望%','upside_pct',v=>v==null?'—':fmt(v,1)+'%'],
+    ['評級','rating',v=>v||'—'],
+    ['RSI14','rsi',v=>fmt(v,1)],
+    ['EMA 排列','ema_stack',v=>v||'—'],
+    ['MACD 柱','macd_hist',v=>v==null?'—':fmt(v,2)],
+    ['20日支持','support20',v=>v==null?'—':fmt(v,2)],
+    ['阻力','resistance',v=>v==null?'—':fmt(v,2)],
+    ['AH溢價%','ah_premium_pct',v=>v==null?'—':fmt(v,1)+'%'],
+    ['相對恒指5D','vs_hsi_5d',v=>v==null?'—':fmt(v,1)+'%'],
+    ['南北水','northbound_note',v=>v||'待分析師補充'],
+    ['業績日','earnings',v=>v||'—'],
+    ['風險等級','risk_level',v=>v||'—'],
+    ['風險','risk',v=>v||'—'],
+  ];
+  out.innerHTML = `<div class="compare-grid">${list.map(tk=>{
+    const p=latestByTicker[tk]; if(!p) return '';
+    const perf=perfByTicker[tk];
+    const rows=metrics.map(([lab,key,fn])=>{
+      let val=fn(p[key]);
+      let cls='';
+      if(key==='upside_pct'&&p.upside_pct!=null) cls=p.upside_pct>=0?'up':'down';
+      if(key==='macd_hist'&&p.macd_hist!=null) cls=p.macd_hist>=0?'up':'down';
+      if(key==='risk_level') val=`<span class="pill ${sevClass(p.risk_level)}">${p.risk_level||'—'}</span>`;
+      return `<div class="row"><span class="k">${lab}</span><span class="vv ${cls}">${val}</span></div>`;
+    }).join('');
+    const ex = perf?`<div class="row"><span class="k">回報%</span><span class="vv ${(perf.ret_pct||0)>=0?'up':'down'}">${fmtPct(perf.ret_pct)}</span></div>
+      <div class="row"><span class="k">超額 恒指</span><span class="vv ${(perf.excess_hsi_pct||0)>=0?'up':'down'}">${fmtPct(perf.excess_hsi_pct)}</span></div>
+      <div class="row"><span class="k">超額 國指</span><span class="vv ${(perf.excess_hsce_pct||0)>=0?'up':'down'}">${fmtPct(perf.excess_hsce_pct)}</span></div>`:'';
+    return `<div class="compare-card"><h4>${tk}</h4><div class="cname">${p.name||''}</div>${rows}${ex}
+      <div style="margin-top:10px"><button type="button" class="btn" data-open="${tk}">開詳情</button></div></div>`;
+  }).join('')}</div>`;
+  out.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openDrawer(latestByTicker[b.dataset.open]));
+}
+document.getElementById('cmpClear').onclick=()=>{ compareSet.clear(); renderCmpChips(); renderCompare(); if(!_urlSilent) writeUrlState(); };
+document.getElementById('cmpGo').onclick=renderCompare;
+renderCmpChips(); renderCompare();
+
+// Search dropdown for compare
+(function(){
+  const inp=document.getElementById('cmpSearch');
+  const dd=document.getElementById('cmpDD');
+  const universe=Object.values(latestByTicker).sort((a,b)=>a.ticker.localeCompare(b.ticker));
+  function show(q){
+    const s=(q||'').trim().toLowerCase();
+    const hits=universe.filter(p=>!s || p.ticker.toLowerCase().includes(s) || (p.name||'').toLowerCase().includes(s)).slice(0,12);
+    if(!hits.length){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+    dd.innerHTML=hits.map(p=>`<div data-t="${p.ticker}"><strong>${p.ticker}</strong> <span style="color:var(--muted)">${p.name||''}</span></div>`).join('');
+    dd.classList.add('open');
+    dd.querySelectorAll('div').forEach(el=>el.onclick=()=>{
+      addCompare(el.dataset.t); inp.value=''; dd.classList.remove('open'); renderCompare();
+    });
+  }
+  inp.addEventListener('input',()=>show(inp.value));
+  inp.addEventListener('focus',()=>show(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const s=inp.value.trim().toUpperCase();
+      if(latestByTicker[s]){ addCompare(s); inp.value=''; dd.classList.remove('open'); renderCompare(); }
+      else show(inp.value);
+    }
+  });
+  document.addEventListener('click',e=>{ if(!e.target.closest('.search-wrap')) dd.classList.remove('open'); });
+})();
+
+// KPI cards + overview extras
+(function(){
+  const k=DATA.kpis, sq=DATA.benchmarks;
+  const cards=[
+    {t:'今日入選',v:k.today_count,h:DATA.meta.latest_date},
+    {t:'獨特代號',v:k.unique_tickers,h:`共 ${k.total_picks} 列入選列`},
+    {t:'14日內業績',v:k.earnings_within_14??'—',h:`30日內 ${k.earnings_within_30??'—'} 隻`},
+    {t:'每日入選（黃）',v:k.every_day_count??0,h:(DATA.meta.every_day_tickers||[]).join('、')||'無'},
+  ];
+  document.getElementById('kpiCards').innerHTML = cards.map(c=>`
+    <div class="card kpi"><h3>${c.t}</h3><div class="val">${c.v}</div><div class="hint">${c.h}</div></div>`).join('');
+
+  const chg = (x)=> `<span class="${x.chg_pct>=0?'up':'down'}">${fmtPct(x.chg_pct)}</span>`;
+  const mktNames={HSI:'恒指 HSI',HSCEI:'國指 HSCEI'};
+  document.getElementById('mktBox').innerHTML = ['HSI','HSCEI'].map(s=>{
+    const x=sq[s];
+    if(!x||x.close==null) return `<div><div class="sym">${mktNames[s]||s}</div><div class="px">—</div></div>`;
+    return `<div><div class="sym">${mktNames[s]||s}</div><div class="px">${fmt(x.close,2)}</div>
+      <div>${chg(x)} <span style="color:var(--muted);font-size:.8rem">${x.date||''}</span></div></div>`;
+  }).join('');
+
+  const multi=k.multi_day;
+  const everySet=new Set(DATA.meta.every_day_tickers||[]);
+  document.getElementById('multiBox').innerHTML = multi.length
+    ? multi.map(m=>`<div style="padding:8px 0;${(m.every_day||everySet.has(m.ticker))?'background:rgba(245,158,11,.12);border-radius:8px;padding:8px 10px;margin:4px 0':''}"><span class="pill blue">${m.ticker}</span>
+        <span style="color:var(--text);margin:0 6px">${(latestByTicker[m.ticker]&&latestByTicker[m.ticker].name)||''}</span>
+        ${(m.every_day||everySet.has(m.ticker))?'<span class="pill" style="background:rgba(245,158,11,.25);color:var(--amber)">每日</span> ':''}
+        入選 ${m.pick_days} 日 · 最近 ${m.last_date} ${m.today?'· <span class="up">今日有入選</span>':''}</div>`).join('')
+    : '<div class="empty">暫無多日重複代號</div>';
+
+  // Earnings countdown
+  const earn=DATA.earnings_countdown||[];
+  const soon=earn.filter(e=>{
+    const d=e.days_to_earnings!=null?e.days_to_earnings:e.days;
+    return d!=null && d>=0;
+  }).slice(0,8);
+  document.getElementById('earnSoon').innerHTML = soon.map(e=>{
+    const d=e.days_to_earnings!=null?e.days_to_earnings:e.days;
+    const urgent=d<=7, near=d<=14;
+    return `<div class="earn-chip ${urgent?'urgent':near?'near':''}">
+      <div class="tk">${e.ticker} <span style="font-weight:400;color:var(--muted);font-size:.72rem">${e.name||''}</span></div>
+      <div class="dd">${d} 日</div>
+      <div class="ed">${e.earnings}</div></div>`;
+  }).join('') || '<div class="empty">暫無即將業績</div>';
+  document.getElementById('earnNote').textContent =
+    `as-of ${AS_OF}｜14日內 ${k.earnings_within_14} 隻｜30日內 ${k.earnings_within_30} 隻（紅≤7日／琥珀≤14日）。Yahoo 未提供可靠未來業績日時顯示待分析師補充。`;
+  const etb=document.querySelector('#earnTable tbody');
+  earn.filter(e=>{
+    const d=e.days_to_earnings!=null?e.days_to_earnings:e.days;
+    return d!=null;
+  }).forEach(e=>{
+    const d=e.days_to_earnings!=null?e.days_to_earnings:e.days;
+    const tr=document.createElement('tr');
+    tr.className='row-click';
+    tr.innerHTML=`<td><strong>${e.ticker}</strong></td><td style="white-space:normal;max-width:120px">${e.name||'—'}</td><td>${e.earnings||'—'}</td>
+      <td class="${d<=14?'warn':''}">${d}</td>
+      <td>${e.sector||'—'}</td><td style="white-space:normal;max-width:180px">${e.risk||e.risk_level||'—'}</td>`;
+    tr.onclick=()=>openDrawer(latestByTicker[e.ticker]);
+    etb.appendChild(tr);
+  });
+
+  // Excess KPIs + chart
+  document.getElementById('excessKpis').innerHTML = `
+    <div class="card kpi" style="padding:12px"><h3>平均超額 恒指</h3>
+      <div class="val ${ (k.avg_excess_hsi||0)>=0?'up':'down'}">${fmtPct(k.avg_excess_hsi)}</div>
+      <div class="hint">全觀察池平均</div></div>
+    <div class="card kpi" style="padding:12px"><h3>平均超額 國指</h3>
+      <div class="val ${ (k.avg_excess_hsce||0)>=0?'up':'down'}">${fmtPct(k.avg_excess_hsce)}</div>
+      <div class="hint">全觀察池平均</div></div>`;
+  const perfSorted=[...DATA.performance].filter(p=>p.excess_hsi_pct!=null)
+    .sort((a,b)=>b.excess_hsi_pct-a.excess_hsi_pct).slice(0,16);
+  new Chart(document.getElementById('chartExcess'),{
+    type:'bar',
+    data:{
+      labels:perfSorted.map(p=>p.ticker),
+      datasets:[
+        {label:'超額 vs 恒指', data:perfSorted.map(p=>p.excess_hsi_pct), backgroundColor:'rgba(59,130,246,.75)'},
+        {label:'超額 vs 國指', data:perfSorted.map(p=>p.excess_hsce_pct), backgroundColor:'rgba(167,139,250,.75)'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10}}},
+      scales:{y:{title:{display:true,text:'超額回報 %'}}}}
+  });
+})();
+
+Chart.defaults.color = '#8fa3bf';
+Chart.defaults.borderColor = '#243552';
+Chart.defaults.font.family = '"Segoe UI","PingFang HK","Noto Sans TC",sans-serif';
+const palette = ['#3b82f6','#22c55e','#f59e0b','#a78bfa','#ef4444','#06b6d4','#f472b6','#84cc16'];
+
+new Chart(document.getElementById('chartDaily'),{
+  type:'line',
+  data:{
+    labels: DATA.kpis.daily_counts.map(d=>d.date.slice(5)),
+    datasets:[{label:'入選數量', data:DATA.kpis.daily_counts.map(d=>d.count),
+      borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.2)', fill:true, tension:.35, pointRadius:5}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,ticks:{stepSize:2}}}}
+});
+const secLabels=Object.keys(DATA.sectors), secVals=Object.values(DATA.sectors);
+new Chart(document.getElementById('chartSector'),{
+  type:'doughnut',
+  data:{labels:secLabels, datasets:[{data:secVals, backgroundColor:palette.slice(0,secLabels.length), borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{boxWidth:12}}}}
+});
+
+// Watchlist
+let sortKey='date', sortDir=-1;
+const sectors=[...new Set(DATA.picks.map(p=>p.sector))].sort();
+const dates=[...new Set(DATA.picks.map(p=>p.date))].sort();
+const fSector=document.getElementById('fSector');
+const fDate=document.getElementById('fDate');
+sectors.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fSector.appendChild(o)});
+dates.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fDate.appendChild(o)});
+
+function filteredPicks(){
+  const sec=fSector.value, dt=fDate.value, rsi=document.getElementById('fRsi').value;
+  const vol=parseFloat(document.getElementById('fVol').value);
+  const risk=document.getElementById('fRisk').value;
+  const q=(document.getElementById('fQ').value||'').trim().toLowerCase();
+  return DATA.picks.filter(p=>{
+    if(sec && p.sector!==sec) return false;
+    if(dt && p.date!==dt) return false;
+    if(rsi && p.rsi_band!==rsi) return false;
+    if(!Number.isNaN(vol) && document.getElementById('fVol').value!=='' && (p.vol_ratio==null || p.vol_ratio<vol)) return false;
+    if(risk && p.risk_level!==risk) return false;
+    if(q && !(p.ticker.toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a,b)=>{
+    const av=a[sortKey], bv=b[sortKey];
+    if(av==null&&bv==null) return 0;
+    if(av==null) return 1; if(bv==null) return -1;
+    if(typeof av==='number') return (av-bv)*sortDir;
+    return String(av).localeCompare(String(bv),'zh-HK')*sortDir;
+  });
+}
+
+function renderWatch(){
+  const rows=filteredPicks();
+  const tb=document.querySelector('#watchTable tbody');
+  tb.innerHTML='';
+  rows.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.className='row-click';
+    const checked = compareSet.has(p.ticker) ? 'checked' : '';
+    const yel = p.every_day ? 'background:rgba(245,158,11,.14)' : '';
+    tr.style = yel;
+    tr.innerHTML=`<td><input type="checkbox" class="cmp-cb" data-tk="${p.ticker}" ${checked} title="加入比較"/></td>
+      <td><strong>${p.ticker}</strong>${p.every_day?' <span class="pill" style="background:rgba(245,158,11,.25);color:var(--amber)">每日</span>':''}</td>
+      <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.date}</td><td>${p.sector||'—'}</td>
+      <td>${fmt(p.close)}</td><td>${p.turnover_m==null?'—':fmt(p.turnover_m,1)}</td>
+      <td>${fmt(p.rsi,1)}</td><td>${fmt(p.vol_ratio,2)}</td>
+      <td>${p.streak??'—'}</td>
+      <td class="${(p.vs_hsi_5d||0)>=0?'up':'down'}">${p.vs_hsi_5d==null?'—':fmtPct(p.vs_hsi_5d)}</td>
+      <td>${p.ah_premium_pct==null?'—':fmt(p.ah_premium_pct,1)+'%'}</td>
+      <td class="${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</td>
+      <td>${p.rating||'—'}</td>
+      <td><span class="pill ${sevClass(p.risk_level)}">${p.risk_level}</span></td>
+      <td style="color:var(--muted);font-size:.78rem">${p.northbound_note||'待分析師補充'}</td>`;
+    tr.querySelector('.cmp-cb').addEventListener('click', e=>{
+      e.stopPropagation();
+      const tk=e.target.dataset.tk;
+      if(e.target.checked){
+        if(compareSet.size>=4){ e.target.checked=false; alert('比較最多 4 隻代號'); return; }
+        compareSet.add(tk);
+      } else compareSet.delete(tk);
+      renderCmpChips();
+      if(!_urlSilent) writeUrlState();
+    });
+    tr.addEventListener('click',()=>openDrawer(p));
+    tb.appendChild(tr);
+  });
+  document.getElementById('watchCount').textContent = `顯示 ${rows.length} / ${DATA.picks.length} 列 · 點擊列開詳情抽屜`;
+}
+function onFilterChange(){
+  renderWatch();
+  if(!_urlSilent) writeUrlState();
+}
+['fSector','fDate','fRsi','fVol','fRisk','fQ'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', onFilterChange);
+  document.getElementById(id).addEventListener('change', onFilterChange);
+});
+document.getElementById('fReset').addEventListener('click',()=>{
+  ['fSector','fDate','fRsi','fVol','fRisk','fQ'].forEach(id=>document.getElementById(id).value='');
+  renderWatch();
+  if(!_urlSilent) writeUrlState();
+});
+document.querySelectorAll('#watchTable th').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const k=th.dataset.k; if(!k) return;
+    if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=1;}
+    renderWatch();
+  });
+});
+renderWatch();
+
+// Risk
+(function(){
+  const sevCount={高:0,中:0,低:0};
+  DATA.risks.forEach(r=>{ if(r.severity) sevCount[r.severity]=(sevCount[r.severity]||0)+1 });
+  new Chart(document.getElementById('chartRisk'),{
+    type:'bar',
+    data:{labels:['高','中','低'],datasets:[{label:'數量',data:[sevCount['高']||0,sevCount['中']||0,sevCount['低']||0],
+      backgroundColor:['#ef4444','#f59e0b','#22c55e']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+  const types={'RSI超買':0,'高於目標價':0,'業績臨近':0,'動能轉弱':0};
+  DATA.risks.forEach(r=>{
+    const f=r.flags||'';
+    if(f.includes('RSI')) types['RSI超買']++;
+    if(f.includes('高於目標')||f.includes('目標價')) types['高於目標價']++;
+    if(f.includes('業績')) types['業績臨近']++;
+    if(f.includes('動能')||f.includes('MACD')) types['動能轉弱']++;
+  });
+  new Chart(document.getElementById('chartRiskType'),{
+    type:'bar',
+    data:{labels:Object.keys(types),datasets:[{data:Object.values(types),backgroundColor:palette}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+  const tb=document.querySelector('#riskTable tbody');
+  DATA.risks.forEach(r=>{
+    if(!r.ticker) return;
+    const tr=document.createElement('tr');
+    tr.className='row-click';
+    tr.innerHTML=`<td><strong>${r.ticker}</strong></td><td style="white-space:normal;max-width:110px">${r.name||(latestByTicker[r.ticker]&&latestByTicker[r.ticker].name)||'—'}</td><td>${r.date}</td><td>${r.sector||'—'}</td>
+      <td>${fmt(r.close)}</td><td>${fmt(r.rsi,1)}</td><td>${r.target==null?'—':fmt(r.target,2)}</td>
+      <td>${r.earnings||'—'}</td><td>${r.flags||'—'}</td>
+      <td><span class="pill ${sevClass(r.severity)}">${r.severity}</span></td>
+      <td style="white-space:normal;max-width:280px">${r.note||'—'}</td>`;
+    tr.onclick=()=>{
+      const p=DATA.picks.find(x=>x.ticker===r.ticker && x.date===r.date) || latestByTicker[r.ticker];
+      openDrawer(p);
+    };
+    tb.appendChild(tr);
+  });
+})();
+
+// Performance
+(function(){
+  const perf=[...DATA.performance].sort((a,b)=>(b.ret_pct||0)-(a.ret_pct||0));
+  new Chart(document.getElementById('chartPerf'),{
+    type:'bar',
+    data:{
+      labels:perf.map(p=>p.ticker),
+      datasets:[{label:'回報%', data:perf.map(p=>p.ret_pct||0),
+        backgroundColor:perf.map(p=>(p.ret_pct||0)>=0?'rgba(34,197,94,.75)':'rgba(239,68,68,.75)')}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.raw,2)}%`}}},
+      scales:{y:{title:{display:true,text:'回報 %'}}}}
+  });
+  const tb=document.querySelector('#perfTable tbody');
+  perf.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.className='row-click';
+    const cls=(p.ret_pct||0)>=0?'up':'down';
+    tr.innerHTML=`<td><strong>${p.ticker}</strong>${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
+      <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date}</td><td>${fmt(p.first_close)}</td><td>${fmt(p.last_close)}</td>
+      <td class="${cls}">${fmtPct(p.ret_pct)}</td>
+      <td>${fmtPct(p.hsi_ret_pct)}</td>
+      <td class="${(p.excess_hsi_pct||0)>=0?'up':'down'}">${fmtPct(p.excess_hsi_pct)}</td>
+      <td>${fmtPct(p.hsce_ret_pct)}</td>
+      <td class="${(p.excess_hsce_pct||0)>=0?'up':'down'}">${fmtPct(p.excess_hsce_pct)}</td>
+      <td>${p.hold_days}</td><td>${p.pick_days}</td>`;
+    tr.onclick=()=>openDrawer(latestByTicker[p.ticker]);
+    tb.appendChild(tr);
+  });
+})();
+
+// Valuation
+(function(){
+  const withPE=DATA.picks.filter(p=>p.pe!=null && p.upside_pct!=null);
+  new Chart(document.getElementById('chartScatter'),{
+    type:'scatter',
+    data:{datasets:[{
+      label:'上望% vs PE',
+      data:withPE.map(p=>({x:p.pe,y:p.upside_pct,ticker:p.ticker})),
+      backgroundColor:'rgba(59,130,246,.75)', pointRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{tooltip:{callbacks:{label:c=>{
+        const r=c.raw; return ` ${r.ticker}: 市盈率 ${fmt(r.x,1)}, 上望 ${fmt(r.y,1)}%`;
+      }}}},
+      scales:{x:{title:{display:true,text:'市盈率'}}, y:{title:{display:true,text:'目標上望 %'}}}}
+  });
+  const latest={};
+  DATA.picks.forEach(p=>{ if(!latest[p.ticker] || p.date>latest[p.ticker].date) latest[p.ticker]=p; });
+  const ups=Object.values(latest).filter(p=>p.upside_pct!=null).sort((a,b)=>b.upside_pct-a.upside_pct);
+  new Chart(document.getElementById('chartUpside'),{
+    type:'bar',
+    data:{labels:ups.map(p=>p.ticker), datasets:[{data:ups.map(p=>p.upside_pct),
+      backgroundColor:ups.map(p=>p.upside_pct>=0?'rgba(34,197,94,.7)':'rgba(239,68,68,.7)')}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{title:{display:true,text:'目標上望 %'}}}}
+  });
+  const tb=document.querySelector('#valTable tbody');
+  DATA.picks.filter(p=>p.has_val).forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.className='row-click';
+    tr.innerHTML=`<td><strong>${p.ticker}</strong></td><td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.date}</td><td>${fmt(p.close)}</td>
+      <td>${p.pe==null?'—':fmt(p.pe,1)}</td><td>${p.fwd_pe==null?'—':fmt(p.fwd_pe,1)}</td>
+      <td>${p.target==null?'—':fmt(p.target,2)}</td>
+      <td class="${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</td>
+      <td>${p.rating||'—'}</td><td style="white-space:normal;max-width:220px">${p.risk||'—'}</td>`;
+    tr.onclick=()=>openDrawer(p);
+    tb.appendChild(tr);
+  });
+})();
+
+// Ops
+(function(){
+  const box=document.getElementById('opsList');
+  const sorted=[...DATA.ops].sort((a,b)=>a.priority-b.priority || a.ticker.localeCompare(b.ticker));
+  box.innerHTML = sorted.map(o=>`
+    <div class="ops-item p${o.priority}" style="cursor:pointer" data-tk="${o.ticker}" data-dt="${o.date}">
+      <div><span class="tag">P${o.priority}</span><span class="t">${o.ticker}</span>
+        <span style="color:var(--muted);margin-left:6px">${(latestByTicker[o.ticker]&&latestByTicker[o.ticker].name)||''}</span>
+        <span class="tag">${o.date}</span>
+        ${o.earnings?`<span class="tag">業績 ${o.earnings}</span>`:''}
+      </div>
+      <div style="margin-top:4px">${o.focus||''}</div>
+      <div class="note">支持 ${o.support20==null?'—':fmt(o.support20,2)} · 阻力 ${o.resistance==null?'—':fmt(o.resistance,2)} · ${o.position||''}</div>
+      <div style="margin-top:4px;font-size:.84rem">${o.action||''}</div>
+    </div>`).join('');
+  box.querySelectorAll('.ops-item').forEach(el=>{
+    el.onclick=()=>{
+      const p=DATA.picks.find(x=>x.ticker===el.dataset.tk && x.date===el.dataset.dt) || latestByTicker[el.dataset.tk];
+      openDrawer(p);
+    };
+  });
+})();
+
+// ========== Round 2: Heatmap / URL state / CSV export ==========
+
+function heatColor(v, maxAbs){
+  if(v==null || Number.isNaN(v)) return 'transparent';
+  const m = maxAbs>0 ? maxAbs : 1;
+  const t = Math.max(-1, Math.min(1, v / m));
+  if(Math.abs(t) < 0.02) return 'rgba(51,65,85,.55)';
+  if(t > 0){
+    const a = 0.25 + 0.65*t;
+    return `rgba(34,197,94,${a.toFixed(3)})`;
+  }
+  const a = 0.25 + 0.65*(-t);
+  return `rgba(239,68,68,${a.toFixed(3)})`;
+}
+
+let hmMode = 'ret';
+function hmMetric(p){
+  if(hmMode==='spy') return p.excess_hsi_pct;
+  if(hmMode==='qqq') return p.excess_hsce_pct;
+  return p.ret_pct;
+}
+function hmMetricLabel(){
+  return ({ret:'絕對回報%', spy:'超額 vs 恒指', qqq:'超額 vs 國指', matrix:'三欄矩陣'})[hmMode]||'';
+}
+
+function renderHeatmap(){
+  const perf = [...DATA.performance].filter(p=>p.ticker);
+  const absVals = perf.flatMap(p=>[p.ret_pct,p.excess_hsi_pct,p.excess_hsce_pct].filter(x=>x!=null)).map(Math.abs);
+  const maxAbs = absVals.length ? Math.max(...absVals, 1) : 5;
+  const thead = document.querySelector('#hmTable thead');
+  const tbody = document.querySelector('#hmTable tbody');
+
+  if(hmMode==='matrix'){
+    const sorted = [...perf].sort((a,b)=>(b.ret_pct||0)-(a.ret_pct||0));
+    thead.innerHTML = `<tr><th class="sticky-col">代號</th><th>名稱</th><th>行業</th><th>首次入選</th><th>絕對回報%</th><th>超額 恒指</th><th>超額 國指</th><th>持有日</th></tr>`;
+    tbody.innerHTML = sorted.map(p=>{
+      const cells = [
+        ['ret_pct', p.ret_pct],
+        ['excess_hsi_pct', p.excess_hsi_pct],
+        ['excess_hsce_pct', p.excess_hsce_pct],
+      ].map(([k,v])=>{
+        const bg = heatColor(v, maxAbs);
+        const cls = (v||0)>=0?'up':'down';
+        return `<td class="hm-cell" style="background:${bg}"><span class="${cls}">${fmtPct(v)}</span></td>`;
+      }).join('');
+      return `<tr class="row-click" data-tk="${p.ticker}">
+        <td class="sticky-col">${p.ticker}${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
+        <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td>
+        ${cells}<td>${p.hold_days??'—'}</td></tr>`;
+    }).join('');
+  } else {
+    const sorted = [...perf].sort((a,b)=>(hmMetric(b)||0)-(hmMetric(a)||0));
+    thead.innerHTML = `<tr><th class="sticky-col">代號</th><th>名稱</th><th>行業</th><th>首次</th><th>最新</th><th>${hmMetricLabel()}</th><th>色條</th></tr>`;
+    tbody.innerHTML = sorted.map(p=>{
+      const v = hmMetric(p);
+      const bg = heatColor(v, maxAbs);
+      const barW = Math.min(100, Math.abs(v||0)/maxAbs*100);
+      const barColor = (v||0)>=0 ? 'var(--green)' : 'var(--red)';
+      return `<tr class="row-click" data-tk="${p.ticker}">
+        <td class="sticky-col">${p.ticker}${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
+        <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td><td>${p.last_date||'—'}</td>
+        <td class="hm-cell" style="background:${bg}"><span class="${(v||0)>=0?'up':'down'}">${fmtPct(v)}</span></td>
+        <td style="min-width:120px"><div style="height:10px;background:var(--bg2);border-radius:4px;overflow:hidden">
+          <div style="width:${barW.toFixed(1)}%;height:100%;background:${barColor};opacity:.85"></div></div></td></tr>`;
+    }).join('');
+  }
+  tbody.querySelectorAll('tr[data-tk]').forEach(tr=>{
+    tr.onclick=()=>openDrawer(latestByTicker[tr.dataset.tk]);
+  });
+  document.getElementById('hmNote').textContent =
+    `顯示 ${perf.length} 隻 · 色階對稱範圍 ±${fmt(maxAbs,1)}% · 指標：${hmMetricLabel()}`;
+
+  // Date × ticker grid
+  const dates = [...new Set(DATA.picks.map(p=>p.date))].sort();
+  const tickers = [...new Set(DATA.picks.map(p=>p.ticker))].sort((a,b)=>{
+    const ra = (perfByTicker[a]&&perfByTicker[a].ret_pct)||0;
+    const rb = (perfByTicker[b]&&perfByTicker[b].ret_pct)||0;
+    return rb-ra;
+  });
+  const pickMap = {};
+  DATA.picks.forEach(p=>{ pickMap[p.ticker+'|'+p.date]=p; });
+  const dthead = document.querySelector('#hmDateTable thead');
+  const dtbody = document.querySelector('#hmDateTable tbody');
+  dthead.innerHTML = `<tr><th class="sticky-col">代號</th><th>名稱</th>${dates.map(d=>`<th>${d.slice(5)}</th>`).join('')}<th>回報%</th></tr>`;
+  dtbody.innerHTML = tickers.map(tk=>{
+    const perf = perfByTicker[tk];
+    const ret = perf ? perf.ret_pct : null;
+    const bgRet = heatColor(ret, maxAbs);
+    const cells = dates.map(d=>{
+      const p = pickMap[tk+'|'+d];
+      if(!p) return `<td class="hm-cell empty">—</td>`;
+      return `<td class="hm-cell" style="background:${bgRet}" title="${tk} ${d} close ${p.close}">${fmt(p.close,2)}</td>`;
+    }).join('');
+    const every=(DATA.meta.every_day_tickers||[]).includes(tk);
+    const nm=(latestByTicker[tk]&&latestByTicker[tk].name)||(perf&&perf.name)||'—';
+    return `<tr class="row-click" data-tk="${tk}"><td class="sticky-col">${tk}${every?' <span class="pill" style="background:rgba(245,158,11,.25);color:var(--amber)">每日</span>':''}</td><td style="white-space:normal;max-width:110px">${nm}</td>${cells}
+      <td class="hm-cell" style="background:${bgRet}"><span class="${(ret||0)>=0?'up':'down'}">${fmtPct(ret)}</span></td></tr>`;
+  }).join('');
+  dtbody.querySelectorAll('tr[data-tk]').forEach(tr=>{
+    tr.onclick=()=>openDrawer(latestByTicker[tr.dataset.tk]);
+  });
+}
+
+document.querySelectorAll('#hmMode button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#hmMode button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    hmMode = btn.dataset.mode;
+    renderHeatmap();
+    if(!_urlSilent) writeUrlState();
+  });
+});
+renderHeatmap();
+
+// —— URL state (query string) ——
+function readUrlState(){
+  const q = new URLSearchParams(location.search);
+  _urlSilent = true;
+  try{
+    const tab = q.get('tab');
+    if(tab && document.querySelector(`.tab[data-tab="${tab}"]`)) activateTab(tab, true);
+
+    const map = {sector:'fSector', date:'fDate', rsi:'fRsi', vol:'fVol', risk:'fRisk', q:'fQ'};
+    Object.entries(map).forEach(([k,id])=>{
+      if(q.has(k)) document.getElementById(id).value = q.get(k);
+    });
+
+    const cmp = (q.get('cmp')||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
+    compareSet.clear();
+    cmp.forEach(tk=>{ if(latestByTicker[tk] && compareSet.size<4) compareSet.add(tk); });
+    renderCmpChips();
+    renderCompare();
+
+    const mode = q.get('hm');
+    if(mode && ['ret','spy','qqq','matrix'].includes(mode)){
+      hmMode = mode;
+      document.querySelectorAll('#hmMode button').forEach(b=>{
+        b.classList.toggle('active', b.dataset.mode===mode);
+      });
+      renderHeatmap();
+    }
+
+    renderWatch();
+  } finally {
+    _urlSilent = false;
+  }
+}
+
+function writeUrlState(){
+  const params = new URLSearchParams();
+  const active = document.querySelector('.tab.active');
+  if(active && active.dataset.tab && active.dataset.tab!=='overview') params.set('tab', active.dataset.tab);
+
+  const fv = id => document.getElementById(id).value;
+  if(fv('fSector')) params.set('sector', fv('fSector'));
+  if(fv('fDate')) params.set('date', fv('fDate'));
+  if(fv('fRsi')) params.set('rsi', fv('fRsi'));
+  if(fv('fVol')) params.set('vol', fv('fVol'));
+  if(fv('fRisk')) params.set('risk', fv('fRisk'));
+  if(fv('fQ')) params.set('q', fv('fQ'));
+  if(compareSet.size) params.set('cmp', [...compareSet].join(','));
+  if(hmMode && hmMode!=='ret') params.set('hm', hmMode);
+
+  const qs = params.toString();
+  const next = location.pathname + (qs ? '?'+qs : '') + location.hash;
+  const cur = location.pathname + location.search + location.hash;
+  if(next !== cur) history.replaceState(null, '', next);
+}
+
+// Restore from URL after controls exist
+readUrlState();
+
+// —— CSV export ——
+function csvEscape(v){
+  if(v==null) return '';
+  const s = String(v);
+  if(/[",\n\r]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function downloadCsv(filename, headers, rows){
+  const lines = [headers.map(csvEscape).join(',')];
+  rows.forEach(r=>lines.push(r.map(csvEscape).join(',')));
+  const bom = '\uFEFF';
+  const blob = new Blob([bom+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function todayStamp(){
+  const d = new Date();
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+document.getElementById('btnExportCsv').addEventListener('click',()=>{
+  const rows = filteredPicks();
+  const headers = ['代號','名稱','行業','入選日','收市價','成交額百萬','RSI14','量比','連續日數','每日入選','市盈率','預測市盈率','目標價','目標上望%','評級','風險等級','業績日','EMA排列','MACD柱','20日支持','阻力','AH溢價%','相對恒指5D','相對國指5D','南北水','風險'];
+  const data = rows.map(p=>[
+    p.ticker, p.name, p.sector, p.date, p.close, p.turnover_m, p.rsi, p.vol_ratio, p.streak, p.every_day?'Y':'',
+    p.pe, p.fwd_pe, p.target, p.upside_pct, p.rating, p.risk_level,
+    p.earnings, p.ema_stack, p.macd_hist, p.support20, p.resistance,
+    p.ah_premium_pct, p.vs_hsi_5d, p.vs_hsce_5d, p.northbound_note||'待分析師補充', p.risk
+  ]);
+  downloadCsv(`港股選股_${todayStamp()}.csv`, headers, data);
+});
+
+</script>
+</body>
+</html>
