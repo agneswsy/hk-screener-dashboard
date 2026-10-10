@@ -215,6 +215,14 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
 .mode-seg button+button{border-left:1px solid var(--border)}
 
 .ov-block{margin-top:18px}
+
+#watchTable th[data-k="name"], #watchTable td.col-name{
+  min-width:160px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#watchTable th[data-k="northbound_note"], #watchTable td.col-nb{
+  min-width:96px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--muted);font-size:.78rem;
+}
 </style>
 </head>
 <body>
@@ -937,7 +945,7 @@ function renderWatch(){
     tr.style = yel;
     tr.innerHTML=`<td><input type="checkbox" class="cmp-cb" data-tk="${p.ticker}" ${checked} title="加入比較"/></td>
       <td><strong>${p.ticker}</strong>${p.every_day?' <span class="pill daily">每日</span>':''}</td>
-      <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.date}</td><td>${p.sector||'—'}</td>
+      <td class="col-name">${p.name||'—'}</td><td>${p.date}</td><td>${p.sector||'—'}</td>
       <td>${fmt(p.close)}</td><td>${p.turnover_m==null?'—':fmt(p.turnover_m,1)}</td>
       <td>${fmt(p.rsi,1)}</td><td>${fmt(p.vol_ratio,2)}</td>
       <td>${p.streak??'—'}</td>
@@ -946,7 +954,7 @@ function renderWatch(){
       <td class="${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</td>
       <td>${p.rating||'—'}</td>
       <td><span class="pill ${sevClass(p.risk_level)}">${p.risk_level}</span></td>
-      <td style="color:var(--muted);font-size:.78rem">${p.northbound_note||'待分析師補充'}</td>`;
+      <td class="col-nb" title="${(p.northbound_note||'待分析師補充').replace(/"/g,'&quot;')}">${p.northbound_note||'待分析師補充'}</td>`;
     tr.querySelector('.cmp-cb').addEventListener('click', e=>{
       e.stopPropagation();
       const tk=e.target.dataset.tk;
@@ -1012,7 +1020,7 @@ renderWatch();
     if(!r.ticker) return;
     const tr=document.createElement('tr');
     tr.className='row-click';
-    tr.innerHTML=`<td><strong>${r.ticker}</strong></td><td style="white-space:normal;max-width:110px">${r.name||(latestByTicker[r.ticker]&&latestByTicker[r.ticker].name)||'—'}</td><td>${r.date}</td><td>${r.sector||'—'}</td>
+    tr.innerHTML=`<td><strong>${r.ticker}</strong></td><td style="white-space:nowrap;min-width:140px;max-width:200px">${r.name||(latestByTicker[r.ticker]&&latestByTicker[r.ticker].name)||'—'}</td><td>${r.date}</td><td>${r.sector||'—'}</td>
       <td>${fmt(r.close)}</td><td>${fmt(r.rsi,1)}</td><td>${r.target==null?'—':fmt(r.target,2)}</td>
       <td>${r.earnings||'—'}</td><td>${r.flags||'—'}</td>
       <td><span class="pill ${sevClass(r.severity)}">${r.severity}</span></td>
@@ -1045,7 +1053,7 @@ renderWatch();
     tr.className='row-click';
     const cls=(p.ret_pct||0)>=0?'up':'down';
     tr.innerHTML=`<td><strong>${p.ticker}</strong>${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
-      <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date}</td><td>${fmt(p.first_close)}</td><td>${fmt(p.last_close)}</td>
+      <td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date}</td><td>${fmt(p.first_close)}</td><td>${fmt(p.last_close)}</td>
       <td class="${cls}">${fmtPct(p.ret_pct)}</td>
       <td>${fmtPct(p.hsi_ret_pct)}</td>
       <td class="${(p.excess_hsi_pct||0)>=0?'up':'down'}">${fmtPct(p.excess_hsi_pct)}</td>
@@ -1087,7 +1095,7 @@ renderWatch();
   DATA.picks.filter(p=>p.has_val).forEach(p=>{
     const tr=document.createElement('tr');
     tr.className='row-click';
-    tr.innerHTML=`<td><strong>${p.ticker}</strong></td><td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.date}</td><td>${fmt(p.close)}</td>
+    tr.innerHTML=`<td><strong>${p.ticker}</strong></td><td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.date}</td><td>${fmt(p.close)}</td>
       <td>${p.pe==null?'—':fmt(p.pe,1)}</td><td>${p.fwd_pe==null?'—':fmt(p.fwd_pe,1)}</td>
       <td>${p.target==null?'—':fmt(p.target,2)}</td>
       <td class="${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</td>
@@ -1167,7 +1175,7 @@ function renderHeatmap(){
       }).join('');
       return `<tr class="row-click" data-tk="${p.ticker}">
         <td class="sticky-col">${p.ticker}${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
-        <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td>
+        <td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td>
         ${cells}<td>${p.hold_days??'—'}</td></tr>`;
     }).join('');
   } else {
@@ -1180,7 +1188,7 @@ function renderHeatmap(){
       const barColor = (v||0)>=0 ? 'var(--green)' : 'var(--red)';
       return `<tr class="row-click" data-tk="${p.ticker}">
         <td class="sticky-col">${p.ticker}${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
-        <td style="white-space:normal;max-width:110px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td><td>${p.last_date||'—'}</td>
+        <td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date||'—'}</td><td>${p.last_date||'—'}</td>
         <td class="hm-cell" style="background:${bg}"><span class="${(v||0)>=0?'up':'down'}">${fmtPct(v)}</span></td>
         <td style="min-width:120px"><div style="height:10px;background:var(--bg2);border-radius:4px;overflow:hidden">
           <div style="width:${barW.toFixed(1)}%;height:100%;background:${barColor};opacity:.85"></div></div></td></tr>`;
@@ -1215,7 +1223,7 @@ function renderHeatmap(){
     }).join('');
     const every=(DATA.meta.every_day_tickers||[]).includes(tk);
     const nm=(latestByTicker[tk]&&latestByTicker[tk].name)||(perf&&perf.name)||'—';
-    return `<tr class="row-click" data-tk="${tk}"><td class="sticky-col">${tk}${every?' <span class="pill daily">每日</span>':''}</td><td style="white-space:normal;max-width:110px">${nm}</td>${cells}
+    return `<tr class="row-click" data-tk="${tk}"><td class="sticky-col">${tk}${every?' <span class="pill daily">每日</span>':''}</td><td style="white-space:nowrap;min-width:140px;max-width:200px">${nm}</td>${cells}
       <td class="hm-cell" style="background:${bgRet}"><span class="${(ret||0)>=0?'up':'down'}">${fmtPct(ret)}</span></td></tr>`;
   }).join('');
   dtbody.querySelectorAll('tr[data-tk]').forEach(tr=>{
