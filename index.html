@@ -259,6 +259,89 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
   color:var(--muted);font-size:.78rem;
 }
 
+/* Dense tables: horizontal scroll + freeze 代號／名稱 (mobile-friendly) */
+.table-wrap.dense{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.table-wrap.dense > table.dense-table{
+  width:max-content;
+  min-width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+.table-wrap.dense th.sticky-cmp,
+.table-wrap.dense td.sticky-cmp,
+.table-wrap.dense th.sticky-tk,
+.table-wrap.dense td.sticky-tk,
+.table-wrap.dense th.sticky-nm,
+.table-wrap.dense td.sticky-nm{
+  position:sticky;
+  z-index:2;
+}
+.table-wrap.dense th.sticky-cmp,
+.table-wrap.dense th.sticky-tk,
+.table-wrap.dense th.sticky-nm{
+  z-index:5;
+  top:0;
+  background:#0f1828;
+}
+.table-wrap.dense td.sticky-cmp,
+.table-wrap.dense td.sticky-tk,
+.table-wrap.dense td.sticky-nm{
+  background:#121c2e;
+}
+.table-wrap.dense tr:nth-child(even) td.sticky-cmp,
+.table-wrap.dense tr:nth-child(even) td.sticky-tk,
+.table-wrap.dense tr:nth-child(even) td.sticky-nm{
+  background:#0e1626;
+}
+.table-wrap.dense tr:hover td.sticky-cmp,
+.table-wrap.dense tr:hover td.sticky-tk,
+.table-wrap.dense tr:hover td.sticky-nm{
+  background:#1a2740;
+}
+.table-wrap.dense tr.row-daily td.sticky-cmp,
+.table-wrap.dense tr.row-daily td.sticky-tk,
+.table-wrap.dense tr.row-daily td.sticky-nm{
+  background:rgba(245,158,11,.18);
+}
+.table-wrap.dense tr.row-daily:hover td.sticky-cmp,
+.table-wrap.dense tr.row-daily:hover td.sticky-tk,
+.table-wrap.dense tr.row-daily:hover td.sticky-nm{
+  background:rgba(245,158,11,.28);
+}
+/* Watchlist: 比 | 代號 | 名稱 */
+#watchTable th.sticky-cmp, #watchTable td.sticky-cmp{left:0;min-width:36px;width:36px;box-sizing:border-box}
+#watchTable th.sticky-tk, #watchTable td.sticky-tk{left:36px;min-width:78px}
+#watchTable th.sticky-nm, #watchTable td.sticky-nm{
+  left:114px;box-shadow:6px 0 10px -6px rgba(0,0,0,.55);
+}
+/* Other dense tables: 代號 | 名稱 */
+#riskTable th.sticky-tk, #riskTable td.sticky-tk,
+#perfTable th.sticky-tk, #perfTable td.sticky-tk,
+#valTable th.sticky-tk, #valTable td.sticky-tk,
+#earnTable th.sticky-tk, #earnTable td.sticky-tk{left:0;min-width:72px}
+#riskTable th.sticky-nm, #riskTable td.sticky-nm,
+#perfTable th.sticky-nm, #perfTable td.sticky-nm,
+#valTable th.sticky-nm, #valTable td.sticky-nm,
+#earnTable th.sticky-nm, #earnTable td.sticky-nm{
+  left:72px;min-width:140px;max-width:200px;
+  box-shadow:6px 0 10px -6px rgba(0,0,0,.55);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.data-stamps{
+  display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;
+  margin:6px 0 4px;font-size:.78rem;color:var(--muted);
+}
+.data-stamps .stamp{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:999px;background:var(--bg2);
+  border:1px solid var(--border);font-variant-numeric:tabular-nums;
+}
+.data-stamps .stamp b{color:var(--text);font-weight:700}
+.data-stamps .stamp.missing{opacity:.7}
+
 /* —— Enhanced detail drawer —— */
 .drawer{overflow-x:hidden}
 .drawer-body{padding:12px 16px 36px}
@@ -372,6 +455,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
   <div class="grid g2 ov-block">
     <div class="card">
       <h3>大盤參考 恒指 / 國指</h3>
+      <div class="data-stamps" id="mktStamps" aria-label="資料日戳"></div>
       <div class="mkt" id="mktBox"></div>
       <div class="mkt-charts">
         <div class="chart-row">
@@ -399,6 +483,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
 
   <div class="ov-block card" id="shippingCard">
     <h3>航運關注</h3>
+    <div class="data-stamps" id="shipStamps" aria-label="航運／新聞日戳"></div>
     <div class="sec-sub" id="shipNote"></div>
     <div class="ship-grid" id="shipBox"></div>
     <div class="ship-news" id="shipNews"></div>
@@ -411,7 +496,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
       <div class="note" id="earnNote"></div>
       <div class="table-wrap dense" style="max-height:220px;margin-top:10px">
         <table id="earnTable" class="dense-table">
-          <thead><tr><th>代號</th><th>名稱</th><th>業績日</th><th>倒數日</th><th>行業</th><th>風險</th></tr></thead>
+          <thead><tr><th class="sticky-tk">代號</th><th class="sticky-nm">名稱</th><th>業績日</th><th>倒數日</th><th>行業</th><th>風險</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -465,8 +550,8 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
     <div class="table-wrap dense" style="max-height:560px;margin-top:8px">
       <table id="watchTable" class="dense-table">
         <thead><tr>
-          <th style="width:36px" title="加入比較">比</th>
-          <th data-k="ticker">代號</th><th data-k="name">名稱</th><th data-k="date">入選日</th><th data-k="sector">行業</th>
+          <th class="sticky-cmp" style="width:36px" title="加入比較">比</th>
+          <th class="sticky-tk" data-k="ticker">代號</th><th class="sticky-nm" data-k="name">名稱</th><th data-k="date">入選日</th><th data-k="sector">行業</th>
           <th data-k="close">收市價</th><th data-k="turnover_m">成交額(百萬)</th><th data-k="rsi">RSI14</th><th data-k="vol_ratio">量比</th>
           <th data-k="streak">連續日數</th>
           <th data-k="vs_hsi_5d">相對恒指5D</th><th data-k="ah_premium_pct">AH溢價%</th>
@@ -513,7 +598,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
     <div class="table-wrap dense" style="max-height:480px">
       <table id="riskTable" class="dense-table">
         <thead><tr>
-          <th>代號</th><th>名稱</th><th>日期</th><th>行業</th><th>收市價</th><th>RSI</th><th>目標價</th>
+          <th class="sticky-tk">代號</th><th class="sticky-nm">名稱</th><th>日期</th><th>行業</th><th>收市價</th><th>RSI</th><th>目標價</th>
           <th>業績日</th><th>標記</th><th>嚴重度</th><th>說明</th>
         </tr></thead>
         <tbody></tbody>
@@ -535,7 +620,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
     <div class="table-wrap dense" style="max-height:480px">
       <table id="perfTable" class="dense-table">
         <thead><tr>
-          <th>代號</th><th>名稱</th><th>行業</th><th>首次入選</th><th>首次收市</th><th>最新收市</th>
+          <th class="sticky-tk">代號</th><th class="sticky-nm">名稱</th><th>行業</th><th>首次入選</th><th>首次收市</th><th>最新收市</th>
           <th>回報%</th><th>恒指同期%</th><th>超額恒指</th><th>國指同期%</th><th>超額國指</th>
           <th>持有日數</th><th>入選日數</th>
         </tr></thead>
@@ -601,7 +686,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
     <div class="table-wrap dense" style="max-height:420px">
       <table id="valTable" class="dense-table">
         <thead><tr>
-          <th>代號</th><th>名稱</th><th>日期</th><th>收市價</th><th>市盈率</th><th>預測市盈率</th><th>目標價</th>
+          <th class="sticky-tk">代號</th><th class="sticky-nm">名稱</th><th>日期</th><th>收市價</th><th>市盈率</th><th>預測市盈率</th><th>目標價</th>
           <th>上望%</th><th>評級</th><th>風險</th>
         </tr></thead>
         <tbody></tbody>
@@ -648,6 +733,57 @@ document.getElementById('metaSub').textContent =
   `擁有人：${DATA.meta.owner}　｜　更新：${DATA.meta.updated}　｜　最新入選／收市日：${DATA.meta.latest_date}　｜　as-of：${AS_OF}`;
 document.getElementById('metaBadge').textContent = `今日 ${DATA.kpis.today_count} 隻 · 每日入選 ${DATA.kpis.every_day_count} 隻 · 估值 ${DATA.kpis.valuation_unique}`;
 document.getElementById('disclaimer').textContent = '⚠ 免責聲明：' + DATA.meta.disclaimer;
+
+/** Format stamp for display; never invent times. */
+function fmtStamp(s){
+  if(s==null || s==='') return null;
+  let t = String(s).trim();
+  if(!t) return null;
+  t = t.replace('T',' ').replace(/\+08:00$/,'').replace(/Z$/,'');
+  if(t.length > 16) t = t.slice(0,16);
+  return t;
+}
+/** Prefer meta.news_as_of; else newest published among details.news + shipping_watch (no invention). */
+function deriveNewsAsOf(){
+  const meta = DATA.meta || {};
+  if(meta.news_as_of) return meta.news_as_of;
+  let best = null;
+  const consider = (s)=>{
+    const f = fmtStamp(s);
+    if(!f) return;
+    if(!best || f > best) best = f;
+  };
+  const sw = DATA.shipping_watch || {};
+  consider(sw.as_of);
+  (sw.items || []).forEach(it => consider(it.published || it.time));
+  const details = DATA.details || {};
+  Object.values(details).forEach(d=>{
+    if(!d) return;
+    (d.news || []).forEach(n => consider(n && (n.published || n.time)));
+  });
+  return best;
+}
+function renderDataStamps(){
+  const mf = DATA.market_flows || {};
+  const sb = mf.southbound || (mf.daily ? mf : null) || {};
+  const sbAsOf = fmtStamp(sb.as_of || mf.as_of);
+  const newsAsOf = fmtStamp(deriveNewsAsOf());
+  const sw = DATA.shipping_watch || {};
+  const shipAsOf = fmtStamp(sw.as_of);
+  const stampHtml = (label, val) => {
+    if(val) return `<span class="stamp"><span>${label}</span><b>${val}</b></span>`;
+    return `<span class="stamp missing"><span>${label}</span><b>—</b></span>`;
+  };
+  const mktEl = document.getElementById('mktStamps');
+  if(mktEl){
+    mktEl.innerHTML = stampHtml('南向資料', sbAsOf) + stampHtml('新聞更新', newsAsOf);
+  }
+  const shipEl = document.getElementById('shipStamps');
+  if(shipEl){
+    shipEl.innerHTML = stampHtml('航運 as-of', shipAsOf) + stampHtml('新聞更新', newsAsOf);
+  }
+}
+renderDataStamps();
 
 // Tabs (+ URL sync Round 2)
 let _urlSilent = false;
@@ -1509,7 +1645,7 @@ renderCmpChips(); renderCompare();
     const names = sw.names || {};
     const tickers = sw.tickers || [];
     if(noteEl){
-      noteEl.textContent = (sw.note || 'OOCL／航運相關') + (sw.as_of ? ` · as-of ${sw.as_of}` : '');
+      noteEl.textContent = sw.note || 'OOCL／航運相關';
     }
     box.innerHTML = tickers.map(tk=>{
       const p = latestByTicker[tk];
@@ -1628,7 +1764,7 @@ renderCmpChips(); renderCompare();
     const d=e.days_to_earnings!=null?e.days_to_earnings:e.days;
     const tr=document.createElement('tr');
     tr.className='row-click';
-    tr.innerHTML=`<td><strong>${e.ticker}</strong></td><td style="white-space:normal;max-width:120px">${e.name||'—'}</td><td>${e.earnings||'—'}</td>
+    tr.innerHTML=`<td class="sticky-tk"><strong>${e.ticker}</strong></td><td class="sticky-nm">${e.name||'—'}</td><td>${e.earnings||'—'}</td>
       <td class="${d<=14?'warn':''}">${d}</td>
       <td>${e.sector||'—'}</td><td style="white-space:normal;max-width:180px">${e.risk||e.risk_level||'—'}</td>`;
     tr.onclick=()=>openDrawer(latestByTicker[e.ticker]);
@@ -1738,11 +1874,10 @@ function renderWatch(){
     const tr=document.createElement('tr');
     tr.className='row-click';
     const checked = compareSet.has(p.ticker) ? 'checked' : '';
-    const yel = p.every_day ? 'background:rgba(245,158,11,.14)' : '';
-    tr.style = yel;
-    tr.innerHTML=`<td><input type="checkbox" class="cmp-cb" data-tk="${p.ticker}" ${checked} title="加入比較"/></td>
-      <td><strong>${p.ticker}</strong>${p.every_day?' <span class="pill daily">每日</span>':''}</td>
-      <td class="col-name">${p.name||'—'}</td><td>${p.date}</td><td>${p.sector||'—'}</td>
+    if(p.every_day){ tr.classList.add('row-daily'); tr.style.background='rgba(245,158,11,.14)'; }
+    tr.innerHTML=`<td class="sticky-cmp"><input type="checkbox" class="cmp-cb" data-tk="${p.ticker}" ${checked} title="加入比較"/></td>
+      <td class="sticky-tk"><strong>${p.ticker}</strong>${p.every_day?' <span class="pill daily">每日</span>':''}</td>
+      <td class="col-name sticky-nm">${p.name||'—'}</td><td>${p.date}</td><td>${p.sector||'—'}</td>
       <td>${fmt(p.close)}</td><td>${p.turnover_m==null?'—':fmt(p.turnover_m,1)}</td>
       <td>${fmt(p.rsi,1)}</td><td>${fmt(p.vol_ratio,2)}</td>
       <td>${p.streak??'—'}</td>
@@ -1817,7 +1952,7 @@ renderWatch();
     if(!r.ticker) return;
     const tr=document.createElement('tr');
     tr.className='row-click';
-    tr.innerHTML=`<td><strong>${r.ticker}</strong></td><td style="white-space:nowrap;min-width:140px;max-width:200px">${r.name||(latestByTicker[r.ticker]&&latestByTicker[r.ticker].name)||'—'}</td><td>${r.date}</td><td>${r.sector||'—'}</td>
+    tr.innerHTML=`<td class="sticky-tk"><strong>${r.ticker}</strong></td><td class="sticky-nm">${r.name||(latestByTicker[r.ticker]&&latestByTicker[r.ticker].name)||'—'}</td><td>${r.date}</td><td>${r.sector||'—'}</td>
       <td>${fmt(r.close)}</td><td>${fmt(r.rsi,1)}</td><td>${r.target==null?'—':fmt(r.target,2)}</td>
       <td>${r.earnings||'—'}</td><td>${r.flags||'—'}</td>
       <td><span class="pill ${sevClass(r.severity)}">${r.severity}</span></td>
@@ -1849,8 +1984,8 @@ renderWatch();
     const tr=document.createElement('tr');
     tr.className='row-click';
     const cls=(p.ret_pct||0)>=0?'up':'down';
-    tr.innerHTML=`<td><strong>${p.ticker}</strong>${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
-      <td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date}</td><td>${fmt(p.first_close)}</td><td>${fmt(p.last_close)}</td>
+    tr.innerHTML=`<td class="sticky-tk"><strong>${p.ticker}</strong>${p.pick_days>=2?' <span class="pill blue">多日</span>':''}</td>
+      <td class="sticky-nm">${p.name||'—'}</td><td>${p.sector||'—'}</td><td>${p.first_date}</td><td>${fmt(p.first_close)}</td><td>${fmt(p.last_close)}</td>
       <td class="${cls}">${fmtPct(p.ret_pct)}</td>
       <td>${fmtPct(p.hsi_ret_pct)}</td>
       <td class="${(p.excess_hsi_pct||0)>=0?'up':'down'}">${fmtPct(p.excess_hsi_pct)}</td>
@@ -1892,7 +2027,7 @@ renderWatch();
   DATA.picks.filter(p=>p.has_val).forEach(p=>{
     const tr=document.createElement('tr');
     tr.className='row-click';
-    tr.innerHTML=`<td><strong>${p.ticker}</strong></td><td style="white-space:nowrap;min-width:140px;max-width:200px">${p.name||'—'}</td><td>${p.date}</td><td>${fmt(p.close)}</td>
+    tr.innerHTML=`<td class="sticky-tk"><strong>${p.ticker}</strong></td><td class="sticky-nm">${p.name||'—'}</td><td>${p.date}</td><td>${fmt(p.close)}</td>
       <td>${p.pe==null?'—':fmt(p.pe,1)}</td><td>${p.fwd_pe==null?'—':fmt(p.fwd_pe,1)}</td>
       <td>${p.target==null?'—':fmt(p.target,2)}</td>
       <td class="${p.upside_pct!=null?(p.upside_pct>=0?'up':'down'):''}">${p.upside_pct==null?'—':fmt(p.upside_pct,1)+'%'}</td>
