@@ -925,6 +925,19 @@ function filteredPicks(){
     if(q && !(p.ticker.toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q))) return false;
     return true;
   }).sort((a,b)=>{
+    if(sortKey==='rating'){
+      const rank=r=>{
+        const s=String(r||'').trim();
+        if(s.includes('強力買入')||s.includes('强烈买入')||/strong\s*buy/i.test(s)) return 1;
+        if(s==='買入'||s==='买入'||/^buy$/i.test(s)) return 2;
+        if(s.includes('持有')||s.includes('中性')||/hold|neutral/i.test(s)) return 3;
+        if(s.includes('減持')||s.includes('沽出')||s.includes('賣出')||/sell|underweight/i.test(s)) return 4;
+        return 5; // 未有共識／無
+      };
+      const ra=rank(a.rating), rb=rank(b.rating);
+      if(ra!==rb) return (ra-rb)*sortDir;
+      return String(a.ticker).localeCompare(String(b.ticker));
+    }
     const av=a[sortKey], bv=b[sortKey];
     if(av==null&&bv==null) return 0;
     if(av==null) return 1; if(bv==null) return -1;
