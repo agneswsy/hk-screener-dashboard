@@ -97,10 +97,12 @@ header.top .sub{color:var(--muted);font-size:.86rem;margin-top:6px;line-height:1
 .pick-card .chg{font-weight:700;font-variant-numeric:tabular-nums}
 .pick-card .tags{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
 
-.multi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.multi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.multi-grid{display:grid;grid-template-columns:1fr;gap:8px;align-content:start}
+.multi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;transition:border-color .15s}
+.multi-card:hover{border-color:var(--accent)}
 .multi-card.daily{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
-.multi-card .line{font-size:.82rem;color:var(--muted);margin-top:4px}
+.multi-card .mc-name{font-weight:700;margin-top:4px;font-size:.92rem;line-height:1.25}
+.multi-card .line{font-size:.78rem;color:var(--muted);margin-top:3px;line-height:1.35}
 
 .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:end}
 .filters label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted)}
@@ -231,6 +233,23 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
 .sector-pills button{padding:6px 14px}
 
 .ov-block{margin-top:18px}
+
+/* Overview: 大盤 + 多日重複 equal height; right scrolls inside */
+.ov-mkt-row{align-items:stretch}
+.ov-mkt-row > .card{display:flex;flex-direction:column;min-height:0}
+.ov-mkt-row > .ov-multi-card{
+  /* Don't let the streak list drive row height — left 大盤 sets it */
+  height:0;min-height:100%;overflow:hidden
+}
+.ov-mkt-row > .ov-multi-card > h3{flex:0 0 auto;margin-bottom:10px}
+.ov-mkt-row #multiBox.multi-grid{
+  flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding-right:2px;scrollbar-gutter:stable
+}
+@media(max-width:980px){
+  .ov-mkt-row > .ov-multi-card{height:auto;min-height:0;overflow:visible}
+  .ov-mkt-row #multiBox.multi-grid{flex:none;overflow-y:visible;max-height:none;scrollbar-gutter:auto}
+}
 
 /* Overview market charts + shipping */
 .mkt-charts{margin-top:12px;display:flex;flex-direction:column;gap:10px}
@@ -467,7 +486,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
     <div class="pick-grid" id="todayPicks"></div>
   </div>
 
-  <div class="grid g2 ov-block">
+  <div class="grid g2 ov-block ov-mkt-row">
     <div class="card">
       <h3><span class="sec-ico"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></span> 大盤參考 恒指 / 國指</h3>
       <div class="data-stamps" id="mktStamps" aria-label="資料日戳"></div>
@@ -490,7 +509,7 @@ footer{margin-top:28px;color:var(--muted);font-size:.78rem;text-align:center;lin
       </div>
       <div class="note" id="mktNote">收市數據取自 yfinance（非即時報價）；南向淨額見柱圖（證時／數據寶）</div>
     </div>
-    <div class="card">
+    <div class="card ov-multi-card">
       <h3><span class="sec-ico"><svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 多日重複入選</h3>
       <div class="multi-grid" id="multiBox"></div>
     </div>
@@ -1759,7 +1778,7 @@ function renderSectorWatch(){
             ${daily?'<span class="pill daily">每日</span>':''}
             ${m.today?'<span class="pill low">今日</span>':''}
           </div>
-          <div style="font-weight:700;margin-top:6px">${nm}</div>
+          <div class="mc-name">${nm}</div>
           <div class="line">入選 ${m.pick_days} 日 · 連續 ${m.streak??'—'} · 最近 ${m.last_date}</div>
         </div>`;
       }).join('')
